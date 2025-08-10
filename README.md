@@ -10,8 +10,8 @@ FundBrave revolutionizes fundraising by creating a decentralized platform where 
 
 🔗 **Decentralized Fundraising** - Direct peer-to-peer funding on blockchain  
 🤖 **AI-Powered Assistant** - Campaign optimization and intelligent donor matching  
-💰 **DeFi Integration** - Staking mechanisms with profit-sharing
-🛡️ **Content Verification** - Numbers Protocol integration for authentic media  
+💰 **DeFi Integration** - Staking mechanisms with profit-sharing  
+🛡️ **Content Verification** - Numbers Protocol integration for authentic media
 🗳️ **Decentralized Governance** - Donor voting rights and community decision-making  
 🎁 **NFT Rewards** - Badges, recognition, and exclusive perks for contributors  
 📱 **Social Features** - Profile pages, updates, direct messaging, and community engagement  
