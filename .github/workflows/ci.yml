@@ -1,0 +1,218 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # Frontend Tests
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: packages/frontend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: packages/frontend
+        run: npm ci
+        
+      - name: Run linter
+        working-directory: packages/frontend
+        run: npm run lint
+        
+      - name: Run type check
+        working-directory: packages/frontend
+        run: npm run type-check
+        
+      - name: Run tests
+        working-directory: packages/frontend
+        run: npm run test:coverage
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: packages/frontend/coverage
+
+  # Smart Contract Tests
+  contracts-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: packages/contracts/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: packages/contracts
+        run: npm ci
+        
+      - name: Compile contracts
+        working-directory: packages/contracts
+        run: npx hardhat compile
+        
+      - name: Run contract tests
+        working-directory: packages/contracts
+        run: npx hardhat test
+        
+      - name: Run gas report
+        working-directory: packages/contracts
+        run: npx hardhat test --gas-report
+
+  # Backend Tests  
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fundbrave_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+          
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: packages/backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: packages/backend
+        run: npm ci
+        
+      - name: Run linter
+        working-directory: packages/backend
+        run: npm run lint
+        
+      - name: Run type check
+        working-directory: packages/backend
+        run: npm run type-check
+        
+      - name: Run unit tests
+        working-directory: packages/backend
+        run: npm run test:unit
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fundbrave_test
+          REDIS_URL: redis://localhost:6379
+          
+      - name: Run integration tests
+        working-directory: packages/backend
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fundbrave_test
+          REDIS_URL: redis://localhost:6379
+
+  # AI Service Tests
+  ai-service-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: packages/ai-service/requirements.txt
+          
+      - name: Install dependencies
+        working-directory: packages/ai-service
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          
+      - name: Run linter
+        working-directory: packages/ai-service
+        run: flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        
+      - name: Run tests
+        working-directory: packages/ai-service
+        run: pytest tests/ --cov=src --cov-report=xml
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: packages/ai-service
+
+  # Security Scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Build and Deploy (only on main branch)
+  deploy:
+    needs: [frontend-test, contracts-test, backend-test, ai-service-test, security-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Build frontend
+        working-directory: packages/frontend
+        run: |
+          npm ci
+          npm run build
+          
+      - name: Build backend
+        working-directory: packages/backend  
+        run: |
+          npm ci
+          npm run build
+          
+      - name: Deploy to staging
+        run: echo "🚀 Deploying to staging environment..."
