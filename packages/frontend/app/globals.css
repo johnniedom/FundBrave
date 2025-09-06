@@ -1,0 +1,501 @@
+@import "tailwindcss";
+
+/* Light theme base (raw values) */
+:root {
+  /* FundBrave Light Theme */
+  --background: #ffffff;
+  --foreground: #09011a;
+  --card: #ffffff;
+  --card-foreground: #09011a;
+  --popover: #ffffff;
+  --popover-foreground: #09011a;
+
+  /* Primary Blue Colors */
+  --primary: #450cf0; /* Brand Primary Blue */
+  --primary-foreground: #ffffff;
+  --primary-50: #ece7fe;
+  --primary-100: #c5b4fa;
+  --primary-200: #a98ff8;
+  --primary-300: #825cf5;
+  --primary-400: #6a3df3;
+  --primary-500: #450cf0;
+  --primary-600: #3f0bda;
+  --primary-700: #3109aa;
+  --primary-800: #260784;
+  --primary-900: #1d0565;
+
+  /* Primary Purple Colors */
+  --purple: #8762fa; /* Brand Primary Purple */
+  --purple-foreground: #ffffff;
+  --purple-50: #f3efff;
+  --purple-100: #dacefd;
+  --purple-200: #c8b7fd;
+  --purple-300: #ae94fb;
+  --purple-400: #9d7ffb;
+  --purple-500: #8762fa;
+  --purple-600: #7a59e1;
+  --purple-700: #6046b4;
+  --purple-800: #4b3689;
+  --purple-900: #3a2a6a;
+
+  /* Primary Soft Purple Colors */
+  --soft-purple: #cd82ff; /* Brand Primary Soft Purple */
+  --soft-purple-foreground: #09011a;
+  --soft-purple-50: #faf3ff;
+  --soft-purple-100: #f0d8ff;
+  --soft-purple-200: #e8c6ff;
+  --soft-purple-300: #deabff;
+  --soft-purple-400: #d79bff;
+  --soft-purple-500: #cd82ff;
+  --soft-purple-600: #bb76e8;
+  --soft-purple-700: #925cb5;
+  --soft-purple-800: #71488c;
+  --soft-purple-900: #56376b;
+
+  /* Secondary Colors */
+  --secondary: #f0d8ff;
+  --secondary-foreground: #09011a;
+
+  /* Neutral Colors */
+  --muted: #e8e8e8;
+  --muted-foreground: #6b6b6b;
+  --accent: #f3efff;
+  --accent-foreground: #09011a;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --border: #e8e8e8;
+  --input: #e8e8e8;
+  --ring: #450cf0;
+  --radius: 0.5rem;
+}
+
+/* Tailwind v4 CSS-first design system tokens */
+@theme {
+  /* Breakpoints (mobile-first) */
+  --breakpoint-xs: 360px; /* small phones */
+  --breakpoint-sm: 480px; /* phones */
+  --breakpoint-md: 768px; /* tablets */
+  --breakpoint-lg: 1024px; /* small laptops */
+  --breakpoint-xl: 1280px; /* desktops */
+  --breakpoint-2xl: 1536px; /* large desktops */
+  --breakpoint-3xl: 1920px; /* wide screens */
+
+  /* Typography */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-display: "Gilgan", var(--font-sans);
+  --font-alt: "Montserrat", var(--font-sans);
+
+  /* Font sizes (fluid ramps for headings) */
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-base: 1rem; /* 16 */
+  --text-lg: 1.125rem; /* 18 */
+  --text-xl: 1.25rem; /* 20 */
+  --text-2xl: clamp(1.35rem, 1.1rem + 0.8vw, 1.75rem);
+  --text-3xl: clamp(1.75rem, 1.3rem + 1.2vw, 2.25rem);
+  --text-4xl: clamp(2.1rem, 1.5rem + 1.8vw, 3rem);
+  --text-5xl: clamp(2.6rem, 1.8rem + 2.6vw, 3.75rem);
+
+  /* Line heights */
+  --leading-tight: 1.15;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+
+  /* Spacing scale (selected core steps) */
+  --spacing-px: 1px;
+  --spacing-0: 0rem;
+  --spacing-0_5: 0.125rem; /* 2 */
+  --spacing-1: 0.25rem; /* 4 */
+  --spacing-1_5: 0.375rem; /* 6 */
+  --spacing-2: 0.5rem; /* 8 */
+  --spacing-2_5: 0.625rem; /* 10 */
+  --spacing-3: 0.75rem; /* 12 */
+  --spacing-3_5: 0.875rem; /* 14 */
+  --spacing-4: 1rem; /* 16 */
+  --spacing-5: 1.25rem; /* 20 */
+  --spacing-6: 1.5rem; /* 24 */
+  --spacing-8: 2rem; /* 32 */
+  --spacing-10: 2.5rem; /* 40 */
+  --spacing-12: 3rem; /* 48 */
+  --spacing-16: 4rem; /* 64 */
+  --spacing-20: 5rem; /* 80 */
+  --spacing-24: 6rem; /* 96 */
+  --spacing-32: 8rem; /* 128 */
+  --spacing-40: 10rem; /* 160 */
+  --spacing-48: 12rem; /* 192 */
+  --spacing-56: 14rem; /* 224 */
+  --spacing-64: 16rem; /* 256 */
+
+  /* Elevation / Shadows */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.12),
+    0 10px 10px -5px rgb(0 0 0 / 0.04);
+  --shadow-glow-primary: 0 0 0 3px rgb(69 12 240 / 0.35);
+
+  /* Transitions & easing */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+  --duration-quick: 120ms;
+  --duration-fast: 180ms;
+  --duration-base: 240ms;
+  --duration-slow: 360ms;
+
+  /* Typography tokens from Figma */
+  --text-desktop-h1: 45px;
+  --text-desktop-h2: 36px;
+  --text-desktop-h3: 28px;
+  --text-desktop-h4: 22px;
+  --text-desktop-h5: 16px;
+  --text-desktop-label: 14px;
+  --text-desktop-small: 12px;
+  --text-mobile-label: 14px;
+  --text-mobile-small: 12px;
+  --text-mobile-very-small: 10px;
+
+  /* Border radius scale */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius: 8px; /* base */
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Container widths */
+  --width-xs: 440px;
+  --width-sm: 640px;
+  --width-md: 768px;
+  --width-lg: 1024px;
+  --width-xl: 1280px;
+  --width-2xl: 1400px; /* existing */
+
+  /* Z-index scale */
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-modal: 1100;
+  --z-popover: 1200;
+  --z-toast: 1300;
+  --z-tooltip: 1400;
+
+  /* Color mappings (link existing raw vars to Tailwind tokens) */
+  /* Colors - CSS variables for dynamic theming */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Primary color palette */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-50: var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+
+  /* Purple color palette */
+  --color-purple: var(--purple);
+  --color-purple-foreground: var(--purple-foreground);
+  --color-purple-50: var(--purple-50);
+  --color-purple-100: var(--purple-100);
+  --color-purple-200: var(--purple-200);
+  --color-purple-300: var(--purple-300);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-600: var(--purple-600);
+  --color-purple-700: var(--purple-700);
+  --color-purple-800: var(--purple-800);
+  --color-purple-900: var(--purple-900);
+
+  /* Soft purple color palette */
+  --color-soft-purple: var(--soft-purple);
+  --color-soft-purple-foreground: var(--soft-purple-foreground);
+  --color-soft-purple-50: var(--soft-purple-50);
+  --color-soft-purple-100: var(--soft-purple-100);
+  --color-soft-purple-200: var(--soft-purple-200);
+  --color-soft-purple-300: var(--soft-purple-300);
+  --color-soft-purple-400: var(--soft-purple-400);
+  --color-soft-purple-500: var(--soft-purple-500);
+  --color-soft-purple-600: var(--soft-purple-600);
+  --color-soft-purple-700: var(--soft-purple-700);
+  --color-soft-purple-800: var(--soft-purple-800);
+  --color-soft-purple-900: var(--soft-purple-900);
+
+  /* Semantic colors */
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* Brand colors - direct values */
+  --color-brand-blue: #450cf0;
+  --color-brand-purple: #8762fa;
+  --color-brand-soft-purple: #cd82ff;
+  --color-brand-dark: #09011a;
+  --color-brand-white: #ffffff;
+
+  /* Component radii tokens (mapped) */
+  --radius-btn: var(--radius-sm);
+  --radius-card: var(--radius-lg);
+  --radius-input: var(--radius);
+
+  /* Font families */
+  --font-family-gilgan: "Gilgan", sans-serif;
+  --font-family-montserrat: "Montserrat", sans-serif;
+
+  /* Legacy container width already mapped above */
+}
+
+/* Container utility override */
+@layer utilities {
+  .container {
+    @apply mx-auto px-8;
+    max-width: var(--width-2xl);
+  }
+  /* Extra utilities leveraging design tokens */
+  .text-balance {
+    text-wrap: balance;
+  }
+  .focus-ring {
+    box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring);
+  }
+  .glass {
+    background: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.12),
+      rgb(255 255 255 / 0.04)
+    );
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+  .shadow-glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+}
+
+.dark {
+  /* FundBrave Dark Theme */
+  --background: #09011a; /* Neutral Dark */
+  --foreground: #ffffff;
+  --card: #1d0565; /* Primary Blue 900 */
+  --card-foreground: #ffffff;
+  --popover: #09011a;
+  --popover-foreground: #ffffff;
+
+  /* Primary Colors in Dark Mode */
+  --primary: #6a3df3; /* Primary Blue 400 */
+  --primary-foreground: #ffffff;
+
+  /* Secondary Colors in Dark Mode */
+  --secondary: #56376b; /* Primary Soft Purple 900 */
+  --secondary-foreground: #ffffff;
+
+  /* Neutral Colors in Dark Mode */
+  --muted: #260784; /* Primary Blue 800 */
+  --muted-foreground: #b5b5b5; /* Neutral White 700 */
+  --accent: #3f0bda; /* Primary Blue 600 */
+  --accent-foreground: #ffffff;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --border: #3109aa; /* Primary Blue 700 */
+  --input: #3109aa; /* Primary Blue 700 */
+  --ring: #a98ff8; /* Primary Blue 200 */
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Add smooth transitions for theme changes */
+button,
+a,
+.transition-theme {
+  transition: color 0.2s ease, background-color 0.2s ease,
+    border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+@layer base {
+  @font-face {
+    font-family: "Gilgan";
+    src: url("/fonts/Gilgan.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Montserrat";
+    src: url("/fonts/Montserrat-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Montserrat";
+    src: url("/fonts/Montserrat-Medium.woff2") format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: "Montserrat";
+    src: url("/fonts/Montserrat-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  /* Use Inter as fallback */
+  html {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  }
+
+  /* Typography defaults */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Gilgan", sans-serif;
+    font-weight: bold;
+    line-height: 1.2;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+/* Focus states */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+/* Common component styling */
+.fundbrave-card {
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background-color: white;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: color 0.2s ease, background-color 0.2s ease,
+    border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dark .fundbrave-card {
+  background-color: var(--primary-900);
+}
+
+.fundbrave-button-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.fundbrave-button-primary:hover {
+  background-color: var(--primary-600);
+}
+
+.fundbrave-button-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.fundbrave-button-secondary {
+  background-color: var(--purple);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.fundbrave-button-secondary:hover {
+  background-color: var(--purple-600);
+}
+
+.fundbrave-button-secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.fundbrave-button-outline {
+  background-color: var(--soft-purple-50);
+  color: var(--primary-900);
+  border: 1px solid var(--soft-purple-100);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.fundbrave-button-outline:hover {
+  background-color: var(--soft-purple-100);
+}
+
+.dark .fundbrave-button-outline {
+  background-color: var(--primary-800);
+  border-color: var(--primary-700);
+  color: white;
+}
+
+.dark .fundbrave-button-outline:hover {
+  background-color: var(--primary-700);
+}
+
+.fundbrave-button-outline:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
