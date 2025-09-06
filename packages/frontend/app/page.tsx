@@ -1,7 +1,5 @@
 import Link from "next/link";
 
-import { link } from "lucide-react";
-
 export default function Home() {
   return (
     <>
@@ -17,7 +15,7 @@ export default function Home() {
         {/* <!-- Add more content here as needed --> */}
         <section className="mt-8 bg-brand-purple">
           <a className=" bg:brand-light-100 dark:bg-brand-dark-800 p-6 rounded-lg shadow-md text-4xl font-semibold text-center block hover:shadow-lg transition-shadow cursor-pointer text-brand-light-100">
-            <link className="inline-block mr-2" href="/campaigns" />
+           
             <Link className="m-2" href="/themePage">
               Go to Theme Page
             </Link>
