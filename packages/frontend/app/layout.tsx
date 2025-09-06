@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "./components/theme";
 import Navbar from "./components/Navbar";
 
+
 export const metadata: Metadata = {
   title: "FundBrave",
   description: "A decentralized fundraising platform.",

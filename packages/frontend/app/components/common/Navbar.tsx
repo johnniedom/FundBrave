@@ -1,6 +1,6 @@
 import React from "react";
 import Image from "next/image";
-import gsap from "gsap";
+// import gsap from "gsap";
 
 function Navbar() {
   return (
@@ -21,7 +21,7 @@ function Navbar() {
               className="block max-w-none w-full h-full"
               height={100}
               width={100}
-              src={"public/FundBrave_dark_logo.png"}
+              src={"/FundBrave_dark_logo.png"}
             />
           </div>
           {/* Search */}
