@@ -22,6 +22,15 @@ export default function Home() {
             </Link>
           </a>
         </section>
+
+        <section className="mt-8">
+          <div className="bg-purple-600 hover:bg-purple-700 p-6 rounded-lg shadow-md text-center transition-colors">
+            <Link href="/createpost-demo" className="text-white text-xl font-semibold block">
+              View CreatePost Component Demo
+            </Link>
+            <p className="text-purple-100 mt-2">Interactive demo of the CreatePost form component</p>
+          </div>
+        </section>
       </main>
     </>
   );
