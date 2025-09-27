@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import Image from "next/image"; 
 // import gsap from "gsap";
 
 function Navbar() {
@@ -16,13 +16,7 @@ function Navbar() {
             className="h-11 overflow-clip relative shrink-0 w-[146px]"
             data-node-id="361:1580"
           >
-            <Image
-              alt="FundBrave Logo"
-              className="block max-w-none w-full h-full"
-              height={100}
-              width={100}
-              src={"/FundBrave_dark_logo.png"}
-            />
+            
           </div>
           {/* Search */}
           <div

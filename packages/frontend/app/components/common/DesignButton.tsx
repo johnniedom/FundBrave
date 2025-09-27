@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@/lib/utils";
 
 // Figma mapping (node set 146:27) without Success Card
 // Sizes: Large (60h), Big (56h), Medium (48h), Small (36h)

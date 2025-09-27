@@ -27,7 +27,7 @@ export default function Navbar() {
               alt="FundBrave Logo"
               height={100}
               width={100}
-              className="object-contain hidden dark:block"
+              className="object-contain dark:block"
             />
           </Link>
         </div>
