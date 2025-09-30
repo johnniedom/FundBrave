@@ -7,6 +7,11 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 
+// MAINTAINER'S NOTE (Component Imports):
+// We import all reusable auth components to maintain consistency
+// across the authentication flow. This modular approach makes
+// maintenance easier and ensures visual coherence.
+
 // Import reusable components
 import AuthLogo from "../../components/auth/AuthLogo";
 import AuthHeader from "../../components/auth/AuthHeader";
@@ -16,13 +21,22 @@ import ServerError from "../../components/auth/ServerError";
 import FormInput from "../../components/auth/FormInput";
 import LoadingButton from "../../components/auth/LoadingButton";
 
+// MAINTAINER'S NOTE (Type Definitions):
+// We infer the SignUpData type from our Zod schema to ensure
+// type safety and consistency between validation and component state.
 type SignUpData = z.infer<typeof signUpSchema>;
 
-interface LoginPageProps {
+// MAINTAINER'S NOTE (Component Interface):
+// Clear interface definition for the SignUp component props.
+// The onToggle callback enables smooth switching to login view.
+interface SignUpPageProps {
   onToggle: () => void;
 }
 
-export default function SignUpPage({ onToggle }: LoginPageProps) {
+// MAINTAINER'S NOTE (SignUp Component):
+// Main signup component with comprehensive form handling,
+// validation, and smooth animations throughout the user experience.
+export default function SignUpPage({ onToggle }: SignUpPageProps) {
   const router = useRouter();
   const [formData, setFormData] = React.useState<SignUpData>({
     username: "",
@@ -173,7 +187,20 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-2">
-      <div className="w-full max-w-2xl rounded-2xl p-4 backdrop-blur-md">
+      {/* MAINTAINER'S NOTE (Main Form Container):
+          Responsive container with backdrop blur effect for modern glass-morphism design.
+          The container provides structure while maintaining visual hierarchy. */}
+      <motion.div
+        className="w-full max-w-2xl rounded-2xl p-4 backdrop-blur-md"
+        initial={{ opacity: 0, scale: 0.96, y: 18 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{
+          type: "spring",
+          stiffness: 340,
+          damping: 22,
+          duration: 0.45,
+        }}
+      >
         <AuthLogo />
 
         <AuthHeader
@@ -191,13 +218,23 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
         <AuthDivider text="or Sign up with" />
 
         <ServerError error={serverError} />
+
+        {/* MAINTAINER'S NOTE (Form Animation):
+            The form uses staggered animations to create a natural flow.
+            Each form element appears with a slight delay, guiding user attention
+            through the registration process step by step. */}
         <motion.form
           className="w-full space-y-6"
           onSubmit={handleSubmit}
           onChange={handleValidate}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
+          transition={{
+            delay: 0.15,
+            type: "spring",
+            stiffness: 320,
+            damping: 22,
+          }}
         >
           <FormInput
             id="username"
@@ -208,7 +245,7 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
             value={formData.username}
             onChange={handleInputChange}
             error={errors.username}
-            delay={0.9}
+            delay={0.2}
           />
 
           <FormInput
@@ -220,7 +257,7 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
             value={formData.email}
             onChange={handleInputChange}
             error={errors.email}
-            delay={1.1}
+            delay={0.2}
           />
 
           <FormInput
@@ -232,7 +269,7 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
             value={formData.password}
             onChange={handleInputChange}
             error={errors.password}
-            delay={1.1}
+            delay={0.2}
           />
 
           <FormInput
@@ -244,7 +281,7 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
             value={formData.confirmPassword}
             onChange={handleInputChange}
             error={errors.confirmPassword}
-            delay={1.1}
+            delay={0.2}
           />
 
           {/* Mobile Forgot Password */}
@@ -329,20 +366,20 @@ export default function SignUpPage({ onToggle }: LoginPageProps) {
           className="mt-6 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.3, duration: 0.4 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
         >
           <span className="text-gray-300">Already have an account? </span>
           <motion.div className="inline-block" whileHover={{ scale: 1.05 }}>
-            <Link
-              href="/login"
-              className="text-purple-400 transition-colors hover:text-purple-300"
+            <button
+              onClick={onToggle}
+              className="text-purple-400 transition-colors br-none hover:text-purple-300"
             >
               {" "}
               Sign in
-            </Link>
+            </button>
           </motion.div>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 }

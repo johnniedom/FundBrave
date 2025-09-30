@@ -3,14 +3,22 @@
 import { motion } from "motion/react";
 import { AuthHeroContent } from "../../../lib/auth-hero-content";
 
+// MAINTAINER'S NOTE (Component Interface):
+// Clean interface definition for the AuthHero component.
+// This ensures type safety and makes the component's API clear.
 interface AuthHeroProps {
   variant: "signup" | "login";
 }
 
+// MAINTAINER'S NOTE (Hero Component):
+// This component renders the animated hero content for the auth flow.
+// It includes staggered animations and smooth transitions to create
+// an engaging user experience that guides attention naturally.
 export default function AuthHero({ variant }: AuthHeroProps) {
+  // MAINTAINER'S NOTE (Content Selection):
+  // We find the appropriate hero content based on the current variant.
+  // This approach makes adding new variants simple and maintainable.
   const hero = AuthHeroContent.find((item) => item.key === variant);
-
-  console.log(hero);
 
   if (!hero) {
     return null;
@@ -18,37 +26,142 @@ export default function AuthHero({ variant }: AuthHeroProps) {
 
   return (
     <motion.section
-      className="flex h-full w-full flex-col items-center justify-center gap-6 px-6 text-white"
-      initial={{ opacity: 0, y: 20 }}
+      className="flex h-full w-full flex-col items-center justify-center gap-8 px-6 text-white relative"
+      initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
     >
+      {/* MAINTAINER'S NOTE (Background Animation):
+          Subtle rotating background element that adds visual interest
+          without being distracting. The slow rotation creates a sense of life. */}
       <motion.div
-        className="flex h-32 w-32 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+        className="absolute inset-0 opacity-5"
+        animate={{
+          rotate: [0, 360],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 16,
+          repeat: Infinity,
+          ease: "linear",
+        }}
       >
-        {hero.svg}
+        <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl" />
       </motion.div>
 
-      <motion.h2
-        className="text-center text-3xl font-semibold"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.4 }}
-      >
-        {hero.title}
-      </motion.h2>
+     
+      <div className="relative w-64 h-64 mb-6 flex items-center justify-center">
+        {/* Outer glow effect */}
+        <motion.div
+          className="absolute w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
 
-      <motion.p
-        className="text-center text-base text-gray-200"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
-      >
-        {hero.subtitle}
-      </motion.p>
+        {/* Main container with subtle rotation */}
+        <motion.div
+          className="relative w-40 h-40 flex items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-sm shadow-2xl"
+          initial={{ scale: 0.65, opacity: 0, rotateY: -65 }}
+          animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+          transition={{
+            delay: 0.15,
+            type: "spring",
+            stiffness: 260,
+            damping: 18,
+          }}
+          whileHover={{
+            scale: 1.05,
+            rotateY: 10,
+            transition: { type: "spring", stiffness: 300, damping: 20 },
+          }}
+        >
+          {/* Icon with floating animation */}
+          <motion.div
+            className="relative z-10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.35 }}
+            whileHover={{
+              y: -5,
+              transition: { type: "spring", stiffness: 300, damping: 20 },
+            }}
+          >
+            {hero.svg}
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* MAINTAINER'S NOTE (Hero Text with Staggered Animation):
+          Text content with carefully timed animations that create
+          a natural reading flow. Each element enters slightly after
+          the previous one, guiding user attention. */}
+      <div className="text-center max-w-md space-y-4 relative z-10">
+        <motion.h2
+          className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
+          initial={{ opacity: 0, y: 18, scale: 0.92 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            delay: 0.35,
+            type: "spring",
+            stiffness: 320,
+            damping: 18,
+          }}
+        >
+          {hero.title}
+        </motion.h2>
+
+        <motion.p
+          className="text-lg text-gray-200 leading-relaxed"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            delay: 0.45,
+            duration: 0.4,
+            ease: "easeOut",
+          }}
+        >
+          {hero.subtitle}
+        </motion.p>
+      </div>
+
+      {/* MAINTAINER'S NOTE (Decorative Elements):
+          Subtle floating elements that add visual interest without
+          overwhelming the main content. These create depth and movement. */}
+      <motion.div
+        className="absolute top-1/4 left-1/4 w-2 h-2 bg-purple-400/30 rounded-full"
+        animate={{
+          y: [0, -20, 0],
+          opacity: [0.3, 0.8, 0.3],
+        }}
+        transition={{
+          duration: 3,
+          repeat: Infinity,
+          delay: 0.5,
+          ease: "easeInOut",
+        }}
+      />
+
+      <motion.div
+        className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-pink-400/30 rounded-full"
+        animate={{
+          y: [0, 15, 0],
+          x: [0, 10, 0],
+          opacity: [0.2, 0.6, 0.2],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          delay: 1.5,
+          ease: "easeInOut",
+        }}
+      />
     </motion.section>
   );
 }

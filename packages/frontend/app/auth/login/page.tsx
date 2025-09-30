@@ -24,7 +24,6 @@ interface LoginPageProps {
   onToggle: () => void;
 }
 
-
 export default function LoginPage({ onToggle }: LoginPageProps) {
   const router = useRouter();
   const { refreshUser } = useAuth();
@@ -72,7 +71,7 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.errors.forEach((err: z.ZodIssue) => {
           if (err.path[0]) {
             fieldErrors[err.path[0] as string] = err.message;
           }
@@ -175,9 +174,9 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
     <div className="flex min-h-screen w-full items-center justify-center p-2">
       <motion.div
         className="w-full max-w-2xl rounded-2xl p-4 backdrop-blur-md"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
       >
         <AuthLogo />
 
@@ -200,9 +199,14 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
         <motion.form
           onSubmit={handleSubmit}
           className="space-y-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ 
+            delay: 0.2, 
+            type: "spring",
+            stiffness: 320,
+            damping: 22
+          }}
         >
           <FormInput
             id="username"
@@ -280,12 +284,12 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
         >
           <span className="text-gray-300">Don't have an account? </span>
           <motion.div className="inline-block" whileHover={{ scale: 1.05 }}>
-            <Link
-              href="/sign-up"
+            <button
+              onClick={onToggle}
               className="text-purple-400 transition-colors hover:text-purple-300"
             >
               Sign Up
-            </Link>
+            </button>
           </motion.div>
         </motion.div>
       </motion.div>

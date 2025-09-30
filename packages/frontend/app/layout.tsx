@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider defaultTheme="system" storageKey="fundbrave-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="fundbrave-theme">
           {children}
         </ThemeProvider>
       </body>

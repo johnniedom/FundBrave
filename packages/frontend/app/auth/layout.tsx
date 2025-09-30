@@ -1,3 +1,4 @@
+import "../globals.css";
 import SessionProvider from "../provider/SessionProvider";
 
 export const metadata = {

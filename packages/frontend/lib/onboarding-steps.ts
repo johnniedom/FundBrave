@@ -6,27 +6,48 @@ import {
   Welcome,
 } from "../app/components/onboarding/steps";
 
+import {
+  MailIcon,
+  UserIcon,
+  GroupPersonIcon,
+  PencilIcon,
+  RocketIcon,
+} from "../app/components/onboarding/icons";
+
 export const ONBOARDING_STEPS = [
   {
     slug: "verify-email",
     title: "Verify your email",
     subtitle: "Enter verification code",
-    // Icon: /* SVG Icon Component */,
+    Icon: MailIcon,
     Component: VerifyEmail,
   },
   {
     slug: "profile-details",
     title: "Profile details",
     subtitle: "Provide profile information",
-    // Icon: /* SVG Icon Component */,
+    Icon: UserIcon,
     Component: ProfileDetails,
   },
   {
     slug: "social-profile",
     title: "Social profile",
     subtitle: "Let's know your social media handles",
-    // Icon: /* SVG Icon Component */,
+    Icon: GroupPersonIcon,
     Component: SocialProfile,
   },
-  // ... and so on for 'goals' and 'welcome'
+  {
+    slug: "goals",
+    title: "Goals",
+    subtitle: "What do you hope to achieve?",
+    Icon: PencilIcon,
+    Component: Goals,
+  },
+  {
+    slug: "welcome",
+    title: "Welcome to FundBrave",
+    subtitle: "Get your goals running",
+    Icon: RocketIcon,
+    Component: Welcome,
+  },
 ];
