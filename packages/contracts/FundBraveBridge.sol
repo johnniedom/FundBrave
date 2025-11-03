@@ -41,6 +41,7 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
     mapping(string => bool) public supportedChains;
     mapping(string => string) public destinationContractAddresses;
     mapping(string => mapping(string => bool)) public supportedTokens;
+    mapping(string => mapping(address => string)) public tokenSymbols;
 
     struct CrossChainDonation {
         address donor;
@@ -87,12 +88,13 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         localFundraiserFactory = _localFundraiserFactory;
     }
 
-    function sendCrossChainDonation(
+    function sendCrossChainAction(
         string calldata destinationChain,
         uint256 fundraiserId,
         address tokenAddress,
         string calldata tokenSymbol,
-        uint256 amount
+        uint256 amount,
+        uint8 action
     ) external payable nonReentrant {
         require(supportedChains[destinationChain], "Chain not supported");
         require(supportedTokens[destinationChain][tokenSymbol], "Token not supported");
@@ -101,7 +103,7 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), amount);
         
-        bytes memory payload = abi.encode(msg.sender, fundraiserId);
+        bytes memory payload = abi.encode(msg.sender, fundraiserId, action);
         
         string memory destinationContract = destinationContractAddresses[destinationChain];
         require(bytes(destinationContract).length > 0, "No destination contract");
@@ -152,46 +154,57 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         string calldata tokenSymbol,
         uint256 amount
     ) internal override nonReentrant {
-        (address donor, uint256 fundraiserId) = abi.decode(payload, (address, uint256));
+        (address donor, uint256 fundraiserId, uint8 action) = 
+        abi.decode(payload, (address, uint256, uint8));
         
         // Get the address of the token Axelar just sent us
         address tokenIn = gateway().tokenAddress(tokenSymbol);
         require(tokenIn != address(0), "Token not registered");
-        require(tokenIn != address(usdtToken), "Donation is already USDT");
 
-        // Approve Uniswap Router to spend the received token
-        IERC20(tokenIn).safeApprove(address(uniswapRouter), amount);
+        uint256 usdtAmountOut;
+        if (tokenIn == address(usdtToken)) {
+            usdtAmountOut = amount;
+        } else {
+            IERC20(tokenIn).safeApprove(address(uniswapRouter), amount);
 
-        address[] memory path = new address[](2);
-        path[0] = tokenIn;
-        path[1] = address(usdtToken);
+            address[] memory path = new address[](2);
+            path[0] = tokenIn;
+            path[1] = address(usdtToken);
 
-        // Execute swap
-        uint256[] memory amountsOut = uniswapRouter.swapExactTokensForTokens(
-            amount,
-            0,
-            path,
-            address(this), 
-            block.timestamp
-        );
-        
-        uint256 usdtAmountOut = amountsOut[amountsOut.length - 1];
+            uint256[] memory amountsOut = uniswapRouter.swapExactTokensForTokens(
+                amount, 0, path, address(this), block.timestamp
+            );
+            usdtAmountOut = amountsOut[amountsOut.length - 1];
+        }
 
         // Approve the factory to spend the USDT we just received
         usdtToken.safeTransfer(localFundraiserFactory, usdtAmountOut);
 
-        // Call the factory to handle the final step
-        (bool success, ) = localFundraiserFactory.call(
-            abi.encodeWithSignature(
-                "handleCrossChainDonation(address,uint256,uint256)",
-                donor,
-                fundraiserId,
-                usdtAmountOut
-            )
-        );
-        require(success, "Donation forwarding failed");
+        if (action == 0) {
+            (bool success, ) = localFundraiserFactory.call(
+                abi.encodeWithSignature(
+                    "handleCrossChainDonation(address,uint256,uint256)",
+                    donor,
+                    fundraiserId,
+                    usdtAmountOut
+                )
+            );
+            require(success, "Donation forwarding failed");
 
-        totalCrossChainVolumeUSDT += usdtAmountOut;
+            totalCrossChainVolumeUSDT += usdtAmountOut;
+        } else if (action == 1) {
+            (bool success, ) = localFundraiserFactory.call(
+                abi.encodeWithSignature(
+                    "handleCrossChainStake(address,uint256,uint256)",
+                    donor,
+                    fundraiserId,
+                    usdtAmountOut
+                )
+            );
+            require(success, "Stake forwarding failed");
+        } else {
+            revert("Invalid action");
+        }
 
         emit CrossChainDonationFinalized(
             sourceChain, donor, fundraiserId, tokenIn, amount, usdtAmountOut
@@ -247,10 +260,10 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         string calldata symbol
     ) external onlyOwner {
         require(supportedChains[chain], "Chain not supported");
-        require(!supportedTokens[chain][token], "Token already supported");
+        require(!supportedTokens[chain][symbol], "Symbol already supported");
         require(token != address(0), "Invalid token address");
         
-        supportedTokens[chain][token] = true;
+        supportedTokens[chain][symbol] = true;
         tokenSymbols[chain][token] = symbol;
         
         emit TokenAdded(chain, token, symbol);
@@ -261,12 +274,11 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
      */
     function removeSupportedToken(
         string calldata chain,
-        address token
+        string calldata symbol
     ) external onlyOwner {
-        require(supportedTokens[chain][token], "Token not supported");
+        require(supportedTokens[chain][symbol], "Token not supported");
         
-        supportedTokens[chain][token] = false;
-        delete tokenSymbols[chain][token];
+        supportedTokens[chain][symbol] = false;
         
         emit TokenRemoved(chain, token);
     }

@@ -8,7 +8,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ISwapRouter.sol";
 import "./Fundraiser.sol";
+import "./StakingPool.sol";
 
+/**
+ * @title FundraiserFactory (Multi-Chain Instance)
+ * @dev This factory is deployed on *each* chain (e.g., Polygon, Arbitrum).
+ * It creates local Fundraiser and StakingPool contracts that
+ * interact with this chain's native DeFi protocols.
+ */
 contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant VERIFIED_CREATOR_ROLE = keccak256("VERIFIED_CREATOR_ROLE");
@@ -18,7 +25,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     
     mapping(address => Fundraiser[]) private _fundraisersByOwner;
     mapping(address => bool) public verifiedCreators;
-    mapping(string => bool) private _categoryExists;
     mapping(uint256 => bool) public activeFundraisers;
     
     string[] public availableCategories;
@@ -30,6 +36,10 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     address public immutable WETH;
     address public platformFeeRecipient;
     address public fundBraveBridge;
+    address public immutable AAVE_POOL;
+    address public immutable A_USDT;
+    mapping(uint256 => address) public stakingPools;
+    mapping(string => bool) private _categoryExists;
     
     uint256 public currentId;
     uint256 constant MAX_LIMIT = 20;
@@ -57,6 +67,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     event CategoryAdded(string category);
     event PlatformFeeRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
     event BridgeUpdated(address indexed newBridge);
+    event StakingPoolCreated(uint256 indexed fundraiserId, address indexed poolAddress);
 
     constructor(
         address _axelarGateway,
@@ -64,7 +75,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         address _uniswapRouter,
         address _usdt,
         address _platformFeeRecipient,
-        address _fundBraveBridge
+        address _fundBraveBridge,
+        address _aavePool,
+        address _aUsdt
     ) {
         require(_axelarGateway != address(0), "Invalid Axelar Gateway");
         require(_axelarGasService != address(0), "Invalid Axelar Gas Service");
@@ -79,6 +92,8 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         WETH = IUniswapRouter(_uniswapRouter).WETH();
         platformFeeRecipient = _platformFeeRecipient;
         fundBraveBridge = _fundBraveBridge;
+        AAVE_POOL = _aavePool;
+        A_USDT = _aUsdt;
         
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -142,12 +157,25 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         
         _fundraisers.push(fundraiser);
         _fundraisersByOwner[msg.sender].push(fundraiser);
+
+        StakingPool pool = new StakingPool(
+            AAVE_POOL,
+            USDT,
+            A_USDT,
+            beneficiary,
+            platformFeeRecipient,
+            address(this),
+            msg.sender
+        );
+
+        stakingPools[currentId] = address(pool);
         activeFundraisers[currentId] = true;
         
         totalFundraisersCreated++;
         activeFundraiserCount++;
         
         emit FundraiserCreated(fundraiser, msg.sender, currentId, name, goal, deadline);
+        emit StakingPoolCreated(currentId, address(pool));
         
         currentId++;
         return address(fundraiser);
@@ -187,8 +215,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
             platformFeeRecipient,
             address(this)
         );
+
+        StakingPool pool = new StakingPool(
+            AAVE_POOL,
+            USDT,
+            A_USDT,
+            beneficiary,
+            platformFeeRecipient,
+            address(this),
+            msg.sender
+        );
         
         _fundraisers.push(fundraiser);
+        stakingPools[currentId] = address(pool);
         _fundraisersByOwner[msg.sender].push(fundraiser);
         activeFundraisers[currentId] = true;
         
@@ -196,10 +235,70 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         activeFundraiserCount++;
         
         emit FundraiserCreated(fundraiser, msg.sender, currentId, name, goal, deadline);
+        emit StakingPoolCreated(currentId, address(pool));
         
         currentId++;
         return address(fundraiser);
     }
+
+    function stakeNative(uint256 fundraiserId) external payable nonReentrant whenNotPaused {
+        require(msg.value > 0, "Value must be > 0");
+        address poolAddress = stakingPools[fundraiserId];
+        require(poolAddress != address(0), "No staking pool");
+
+        uint256 usdtAmount = _swapNativeToUSDT(msg.value);
+
+        USDT.safeTransfer(poolAddress, usdtAmount);
+        StakingPool(poolAddress).depositFor(msg.sender, usdtAmount);
+    }
+
+    function stakeERC20(uint256 fundraiserId, address token, uint256 amount) 
+        external 
+        nonReentrant
+        whenNotPaused
+    {
+        address poolAddress = stakingPools[fundraiserId];
+        require(poolAddress != address(0), "No staking pool");
+        
+        // 1. Pull token
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+        // 2. Swap to USDT
+        uint256 usdtAmount = _swapToUSDT(token, amount);
+
+        // 3. Transfer USDT to pool and call depositFor
+        USDT.safeTransfer(poolAddress, usdtAmount);
+        StakingPool(poolAddress).depositFor(msg.sender, usdtAmount);
+    }
+    
+    function _swapToUSDT(address tokenIn, uint256 amountIn) 
+        private 
+        returns (uint256) 
+    {
+        if (tokenIn == USDT) return amountIn;
+
+        IERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
+        address[] memory path = new address[](2);
+        path[0] = tokenIn;
+        path[1] = USDT;
+
+        uint256[] memory amounts = uniswapRouter.swapExactTokensForTokens(
+            amountIn, 0, path, address(this), block.timestamp
+        );
+        return amounts[1];
+    }
+
+    function _swapNativeToUSDT(uint256 amountIn) private returns (uint256) {
+        address[] memory path = new address[](2);
+        path[0] = WETH;
+        path[1] = USDT;
+
+        uint256[] memory amounts = uniswapRouter.swapExactETHForTokens{value: amountIn}(
+            0, path, address(this), block.timestamp
+        );
+        return amounts[1];
+    }
+
 
     /**
      * @dev Handles a processed cross-chain donation from the FundBraveBridge.
@@ -222,41 +321,33 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         totalFundsRaised += usdtAmount;
     }
 
+    function handleCrossChainStake(
+        address donor,
+        uint256 fundraiserId,
+        uint256 usdtAmount
+    ) external nonReentrant whenNotPaused onlyBridge {
+        address poolAddress = stakingPools[fundraiserId];
+        require(poolAddress != address(0), "No staking pool");
+
+        USDT.safeTransfer(poolAddress, usdtAmount);
+        StakingPool(poolAddress).depositFor(donor, usdtAmount);
+    }
 
     /**
-     * @dev Donate native coin (ETH, MATIC, etc.) to a fundraiser.
-     * Swaps the native coin to USDT and forwards it.
+     * @dev Donate native currency to a fundraiser.
+     * Swaps to USDT and forwards it.
      */
-    function donateNative(
-        uint256 fundraiserId
-    ) external payable nonReentrant whenNotPaused {
-        require(msg.value > 0, "Factory: Must send native coin");
-        require(fundraiserId < _fundraisers.length, "Factory: Invalid fundraiser ID");
-        
+    function donateNative(uint256 fundraiserId)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+    {
+        require(fundraiserId < _fundraisers.length, "Invalid ID");
         Fundraiser fundraiser = _fundraisers[fundraiserId];
-        
-        // Swap native coin (ETH) for USDT
-        // The factory contract (address(this)) will receive the USDT
-        address[] memory path = new address[](2);
-        path[0] = WETH;
-        path[1] = USDT;
-
-        uint256[] memory amountsOut = uniswapRouter.swapExactETHForTokens{value: msg.value}(
-            0, 
-            path,
-            address(this),
-            block.timestamp
-        );
-        
-        uint256 usdtAmount = amountsOut[1];
-
-        // Transfer the final USDT to the fundraiser contract
-        IERC20(USDT).safeTransfer(address(fundraiser), usdtAmount);
-
-        // Credit the donation on the fundraiser contract
+        uint256 usdtAmount = _swapNativeToUSDT(msg.value);
+        USDT.safeTransfer(address(fundraiser), usdtAmount);
         fundraiser.creditDonation(msg.sender, usdtAmount, "native-local");
-        
-        // Update factory stats
         totalFundsRaised += usdtAmount;
     }
 
@@ -281,21 +372,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         if (token == USDT) {
             usdtAmount = amount;
         } else {
-            // Swap the token for USDT
-            IERC20(token).safeApprove(address(uniswapRouter), amount);
-
-            address[] memory path = new address[](2);
-            path[0] = token;
-            path[1] = USDT;
-
-            uint256[] memory amountsOut = uniswapRouter.swapExactTokensForTokens(
-                amount,
-                0,
-                path,
-                address(this),
-                block.timestamp
-            );
-            usdtAmount = amountsOut[1];
+            usdtAmount = _swapToUSDT(token, amount);
         }
 
         // Transfer the final USDT to the fundraiser contract
