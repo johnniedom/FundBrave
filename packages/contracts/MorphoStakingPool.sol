@@ -5,33 +5,31 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IAavePool.sol"; 
-import "./interfaces/IERC20Detailed.sol";
+import "./interfaces/IMetaMorpho.sol";
 
 /**
- * @title StakingPool
- * @dev Manages staked funds for a single fundraiser by depositing
- * them into Aave V3 to generate yield.
- * The yield is then split 79/19/2.
+ * @title StakingPool (Morpho Version)
+ * @dev A staking pool that interacts with a Morpho MetaMorpho (ERC4626) vault.
+ * It has the SAME external functions as your Aave pool,
+ * but its internal logic calls a Morpho MetaMorpho (ERC4626) vault.
  */
-contract StakingPool is ReentrancyGuard, Ownable {
+contract MorphoStakingPool is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    // --- Aave & Token Addresses ---
-    IAavePool public immutable AAVE_POOL;
+    // --- Morpho & Token Addresses ---
+    // This is the ERC4626 MetaMorpho Vault
+    IMetaMorpho public immutable METAMORPHO_VAULT;
     IERC20 public immutable USDT;
-    IERC20 public immutable aUSDT;
 
     // --- Beneficiaries ---
-    address public immutable beneficiary; // 79% (Fundraiser)
-    address public immutable platformWallet; // 2% (Platform)
-    address public immutable factoryAddress; // For access control
+    address public immutable beneficiary;
+    address public immutable platformWallet;
+    address public immutable factoryAddress;
 
     // --- Staking Data ---
     uint256 public totalStakedPrincipal;
     mapping(address => uint256) public stakerPrincipal;
-    
-    // --- Staker Rewards (The 19%) ---
+
     uint256 public rewardPerTokenStored;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -59,22 +57,21 @@ contract StakingPool is ReentrancyGuard, Ownable {
     }
 
     constructor(
-        address _aavePool,
+        address _morphoVault,
         address _usdt,
-        address _aUsdt,
         address _beneficiary,
         address _platformWallet,
         address _factoryAddress,
         address _owner
     ) Ownable(_owner) {
-        AAVE_POOL = IAavePool(_aavePool);
+        METAMORPHO_VAULT = IMetaMorpho(_morphoVault);
         USDT = IERC20(_usdt);
-        aUSDT = IERC20(_aUsdt);
+        
         beneficiary = _beneficiary;
         platformWallet = _platformWallet;
         factoryAddress = _factoryAddress;
 
-        USDT.approve(address(AAVE_POOL), type(uint256).max);
+        USDT.approve(address(METAMORPHO_VAULT), type(uint256).max);
     }
 
     /**
@@ -95,41 +92,54 @@ contract StakingPool is ReentrancyGuard, Ownable {
         return rewards[staker] + earned(staker);
     }
 
+    // --- Staking Functions ---
+
     /**
-     * @dev Called by the Factory after it swaps user's token to USDT.
+     * @dev Called by the Factory.
+     * Takes USDT from factory, deposits it into Morpho for shares.
      */
-    function depositFor(address staker, uint256 usdtAmount) 
-        external 
-        onlyFactory 
+    function depositFor(address staker, uint256 usdtAmount)
+        external
+        onlyFactory
         nonReentrant
         updateReward(staker)
     {
         require(usdtAmount > 0, "Amount must be > 0");
         USDT.safeTransferFrom(factoryAddress, address(this), usdtAmount);
-        AAVE_POOL.supply(address(USDT), usdtAmount, address(this), 0);
         
+        METAMORPHO_VAULT.deposit(usdtAmount, address(this));
+
         stakerPrincipal[staker] += usdtAmount;
         totalStakedPrincipal += usdtAmount;
-        
+
         emit Staked(staker, usdtAmount);
     }
 
     /**
      * @dev Staker withdraws their principal.
+     * Redeems this contract's shares for USDT and sends to staker.
      */
-    function unstake(uint256 usdtAmount) external nonReentrant updateReward(msg.sender) {
+    function unstake(uint256 usdtAmount)
+        external
+        nonReentrant
+        updateReward(msg.sender)
+    {
         require(usdtAmount > 0, "Amount must be > 0");
         require(stakerPrincipal[msg.sender] >= usdtAmount, "Insufficient stake");
 
         stakerPrincipal[msg.sender] -= usdtAmount;
         totalStakedPrincipal -= usdtAmount;
 
-        // This will withdraw USDT by redeeming aUSDT
-        AAVE_POOL.withdraw(address(USDT), usdtAmount, msg.sender);
-        
+        METAMORPHO_VAULT.withdraw(usdtAmount, msg.sender, address(this));
+
         emit Unstaked(msg.sender, usdtAmount);
     }
 
+    // --- Reward Functions ---
+
+    /**
+     * @dev Staker claims their share of the 19% pool. 
+     */
     function claimStakerRewards() external nonReentrant updateReward(msg.sender) {
         uint256 reward = rewards[msg.sender];
         require(reward > 0, "No rewards to claim");
@@ -141,15 +151,17 @@ contract StakingPool is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @dev Harvests yield from Aave and splits it 79/19/2.
+     * @dev Harvests yield from Morpho and splits it 79/19/2.
      * Anyone can call this.
      */
     function harvestAndDistribute() external nonReentrant {
-        uint256 currentAaveBalance = aUSDT.balanceOf(address(this));
-        uint256 yield = currentAaveBalance - totalStakedPrincipal;
+        uint256 totalShares = METAMORPHO_VAULT.balanceOf(address(this));
+        
+        uint256 currentAssetValue = METAMORPHO_VAULT.previewRedeem(totalShares);
+        uint256 yield = currentAssetValue - totalStakedPrincipal;
         require(yield > 0, "No yield to harvest");
 
-        AAVE_POOL.withdraw(address(USDT), yield, address(this));
+        METAMORPHO_VAULT.withdraw(yield, address(this), address(this));
 
         uint256 fundraiserShare = (yield * FUNDRAISER_SHARE) / TOTAL_BASIS;
         uint256 stakerShare = (yield * STAKER_SHARE) / TOTAL_BASIS;
@@ -158,9 +170,7 @@ contract StakingPool is ReentrancyGuard, Ownable {
         USDT.safeTransfer(beneficiary, fundraiserShare);
         USDT.safeTransfer(platformWallet, platformShare);
 
-        // Instead of adding to a global pool, update the reward-per-token
         if (totalStakedPrincipal > 0) {
-            // We use 1e18 as a "scaling factor" for precision
             rewardPerTokenStored += (stakerShare * 1e18) / totalStakedPrincipal;
         }
 

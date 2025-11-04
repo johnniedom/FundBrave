@@ -9,10 +9,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ISwapRouter.sol";
 import "./Fundraiser.sol";
 import "./StakingPool.sol";
+import "./MorphoStakingPool.sol";
 
 /**
  * @title FundraiserFactory (Multi-Chain Instance)
- * @dev This factory is deployed on *each* chain (e.g., Polygon, Arbitrum).
+ * @dev Deploys EITHER an Aave or Morpho staking pool based on chain config.
  * It creates local Fundraiser and StakingPool contracts that
  * interact with this chain's native DeFi protocols.
  */
@@ -40,6 +41,8 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     address public immutable A_USDT;
     mapping(uint256 => address) public stakingPools;
     mapping(string => bool) private _categoryExists;
+    address public immutable MORPHO_VAULT;
+    uint8 public immutable stakingPoolType;
     
     uint256 public currentId;
     uint256 constant MAX_LIMIT = 20;
@@ -77,7 +80,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         address _platformFeeRecipient,
         address _fundBraveBridge,
         address _aavePool,
-        address _aUsdt
+        address _aUsdt,
+        address _morphoVault,
+        uint8 _stakingPoolType
     ) {
         require(_axelarGateway != address(0), "Invalid Axelar Gateway");
         require(_axelarGasService != address(0), "Invalid Axelar Gas Service");
@@ -94,6 +99,8 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         fundBraveBridge = _fundBraveBridge;
         AAVE_POOL = _aavePool;
         A_USDT = _aUsdt;
+        MORPHO_VAULT = _morphoVault;
+        stakingPoolType = _stakingPoolType;
         
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
@@ -158,15 +165,33 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         _fundraisers.push(fundraiser);
         _fundraisersByOwner[msg.sender].push(fundraiser);
 
-        StakingPool pool = new StakingPool(
-            AAVE_POOL,
-            USDT,
-            A_USDT,
-            beneficiary,
-            platformFeeRecipient,
-            address(this),
-            msg.sender
-        );
+        address poolAddress;
+        if (stakingPoolType == 0) {
+            require(AAVE_POOL != address(0), "Factory: Aave not configured");
+            StakingPool pool = new StakingPool(
+                AAVE_POOL,
+                USDT,
+                A_USDT,
+                beneficiary,
+                platformFeeRecipient,
+                address(this),
+                msg.sender
+            );
+            poolAddress = address(pool);
+        } else if (stakingPoolType == 1) {
+            require(MORPHO_VAULT != address(0), "Factory: Morpho not configured");
+            MorphoStakingPool pool = new MorphoStakingPool(
+                MORPHO_VAULT,
+                USDT,
+                beneficiary,
+                platformFeeRecipient,
+                address(this),
+                msg.sender
+            );
+            poolAddress = address(pool);
+        } else {
+            revert("Factory: Invalid staking pool type");
+        }
 
         stakingPools[currentId] = address(pool);
         activeFundraisers[currentId] = true;
@@ -216,15 +241,33 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
             address(this)
         );
 
-        StakingPool pool = new StakingPool(
-            AAVE_POOL,
-            USDT,
-            A_USDT,
-            beneficiary,
-            platformFeeRecipient,
-            address(this),
-            msg.sender
-        );
+        address poolAddress;
+        if (stakingPoolType == 0) {
+            require(AAVE_POOL != address(0), "Factory: Aave not configured");
+            StakingPool pool = new StakingPool(
+                AAVE_POOL,
+                USDT,
+                A_USDT,
+                beneficiary,
+                platformFeeRecipient,
+                address(this),
+                msg.sender
+            );
+            poolAddress = address(pool);
+        } else if (stakingPoolType == 1) {
+            require(MORPHO_VAULT != address(0), "Factory: Morpho not configured");
+            MorphoStakingPool pool = new MorphoStakingPool(
+                MORPHO_VAULT,
+                USDT,
+                beneficiary,
+                platformFeeRecipient,
+                address(this),
+                msg.sender
+            );
+            poolAddress = address(pool);
+        } else {
+            revert("Factory: Invalid staking pool type");
+        }
         
         _fundraisers.push(fundraiser);
         stakingPools[currentId] = address(pool);

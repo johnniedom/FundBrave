@@ -11,7 +11,9 @@ const networkConfig = {
     usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     aavePool: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
     aUsdt: "0x6ab707Aca953eDAeFBc4fD23bA73294241490620",
-    weth: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", 
+    weth: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    morphoVault: ethers.constants.AddressZero,
+    stakingPoolType: 0, 
   },
   // Mumbai Testnet (ChainId: 80001)
   80001: {
@@ -23,6 +25,18 @@ const networkConfig = {
     aavePool: "0x9198F13B08E299d85E096929fA9781A1E3d5d827",
     aUsdt: "0x606501f68cE16Ea6E4ABf856B3eb402A3C4C6088",
     weth: "0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889",
+  },
+  // StatusL2 (Example ChainId: 12345)
+  12345: {
+    name: "statusL2",
+    axelarGateway: "0x...",
+    axelarGasService: "0x...",
+    uniswapRouter: "0x...", // Status's Uniswap
+    usdt: "0x...",         
+    aavePool: ethers.constants.AddressZero, // It's not an Aave chain
+    aUsdt: ethers.constants.AddressZero,
+    morphoVault: "0x...",  // The REAL Morpho Vault address
+    stakingPoolType: 1, // 1 = Morpho
   },
 };
 
