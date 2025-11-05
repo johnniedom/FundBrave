@@ -8,16 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/executable/AxelarExecutable.sol";
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/interfaces/IAxelarGasService.sol";
 import "@axelar-network/axelar-gmp-sdk-solidity/contracts/utils/AxelarStrings.sol";
-
-interface IUniswapRouter {
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-}
+import "./interfaces/ISwapAdapter.sol";
 
 interface IFundraiser {
     function creditDonation(address donor, uint256 usdtAmount) external;
@@ -33,7 +24,8 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
     using AxelarStrings for address;
 
     IAxelarGasService public immutable gasService;
-    IUniswapRouter public immutable uniswapRouter;
+    ISwapAdapter public immutable swapAdapter;
+    address public immutable WETH;
     IERC20 public immutable usdtToken;
     address public immutable localFundraiserFactory;
 
@@ -78,12 +70,12 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
     constructor(
         address _gateway,
         address _gasService,
-        address _uniswapRouter,
+        address _swapAdapter,
         address _usdtToken,
         address _localFundraiserFactory
     ) AxelarExecutable(_gateway) Ownable(msg.sender) {
         gasService = IAxelarGasService(_gasService);
-        uniswapRouter = IUniswapRouter(_uniswapRouter);
+        swapAdapter = ISwapAdapter(_swapAdapter);
         usdtToken = IERC20(_usdtToken);
         localFundraiserFactory = _localFundraiserFactory;
     }
@@ -155,9 +147,8 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         uint256 amount
     ) internal override nonReentrant {
         (address donor, uint256 fundraiserId, uint8 action) = 
-        abi.decode(payload, (address, uint256, uint8));
+            abi.decode(payload, (address, uint256, uint8));
         
-        // Get the address of the token Axelar just sent us
         address tokenIn = gateway().tokenAddress(tokenSymbol);
         require(tokenIn != address(0), "Token not registered");
 
@@ -165,19 +156,11 @@ contract FundBraveBridge is AxelarExecutable, Ownable, ReentrancyGuard {
         if (tokenIn == address(usdtToken)) {
             usdtAmountOut = amount;
         } else {
-            IERC20(tokenIn).safeApprove(address(uniswapRouter), amount);
-
-            address[] memory path = new address[](2);
-            path[0] = tokenIn;
-            path[1] = address(usdtToken);
-
-            uint256[] memory amountsOut = uniswapRouter.swapExactTokensForTokens(
-                amount, 0, path, address(this), block.timestamp
-            );
-            usdtAmountOut = amountsOut[amountsOut.length - 1];
+            IERC20(tokenIn).safeApprove(address(swapAdapter), amount);
+            
+            usdtAmountOut = swapAdapter.swapToUSDT(tokenIn, amount);
         }
-
-        // Approve the factory to spend the USDT we just received
+         
         usdtToken.safeTransfer(localFundraiserFactory, usdtAmountOut);
 
         if (action == 0) {

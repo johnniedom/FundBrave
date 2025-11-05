@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ISwapRouter.sol";
+import "./interfaces/ISwapAdapter.sol";
 import "./Fundraiser.sol";
 import "./StakingPool.sol";
 import "./MorphoStakingPool.sol";
@@ -32,7 +33,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     
     address public immutable axelarGateway;
     address public immutable axelarGasService;
-    IUniswapRouter public immutable uniswapRouter;
+    ISwapAdapter public immutable swapAdapter;
     address public immutable USDT;
     address public immutable WETH;
     address public platformFeeRecipient;
@@ -75,8 +76,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     constructor(
         address _axelarGateway,
         address _axelarGasService,
-        address _uniswapRouter,
+        address _swapAdapter,
         address _usdt,
+        address _weth,
         address _platformFeeRecipient,
         address _fundBraveBridge,
         address _aavePool,
@@ -86,13 +88,13 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     ) {
         require(_axelarGateway != address(0), "Invalid Axelar Gateway");
         require(_axelarGasService != address(0), "Invalid Axelar Gas Service");
-        require(_uniswapRouter != address(0), "Invalid Uniswap Router");
+        require(_swapAdapter != address(0), "Invalid swap Adapter");
         require(_usdt != address(0), "Invalid USDT address");
         require(_platformFeeRecipient != address(0), "Invalid platform fee recipient");
         
         axelarGateway = _axelarGateway;
         axelarGasService = _axelarGasService;
-        uniswapRouter = IUniswapRouter(_uniswapRouter);
+        swapAdapter = ISwapAdapter(_swapAdapter);
         USDT = _usdt;
         WETH = IUniswapRouter(_uniswapRouter).WETH();
         platformFeeRecipient = _platformFeeRecipient;
@@ -320,26 +322,13 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     {
         if (tokenIn == USDT) return amountIn;
 
-        IERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
-        address[] memory path = new address[](2);
-        path[0] = tokenIn;
-        path[1] = USDT;
+        IERC20(tokenIn).safeApprove(address(swapAdapter), amountIn);
 
-        uint256[] memory amounts = uniswapRouter.swapExactTokensForTokens(
-            amountIn, 0, path, address(this), block.timestamp
-        );
-        return amounts[1];
+        return swapAdapter.swapToUSDT(tokenIn, amountIn);
     }
 
     function _swapNativeToUSDT(uint256 amountIn) private returns (uint256) {
-        address[] memory path = new address[](2);
-        path[0] = WETH;
-        path[1] = USDT;
-
-        uint256[] memory amounts = uniswapRouter.swapExactETHForTokens{value: amountIn}(
-            0, path, address(this), block.timestamp
-        );
-        return amounts[1];
+        return swapAdapter.swapNativeToUSDT{value: amountIn}();
     }
 
 
