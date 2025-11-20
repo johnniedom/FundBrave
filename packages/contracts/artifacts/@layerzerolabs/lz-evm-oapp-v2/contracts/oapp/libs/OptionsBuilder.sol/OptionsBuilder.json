@@ -1,0 +1,38 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OptionsBuilder",
+  "sourceName": "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "optionType",
+          "type": "uint16"
+        }
+      ],
+      "name": "InvalidOptionType",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "max",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "actual",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidSize",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea26469706673582212205b64cf964ae58a9379b62017f61e2ab7ce3f4f105e67cfb14e428509879fbc6864736f6c63430008140033",
+  "deployedBytecode": "0x600080fdfea26469706673582212205b64cf964ae58a9379b62017f61e2ab7ce3f4f105e67cfb14e428509879fbc6864736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

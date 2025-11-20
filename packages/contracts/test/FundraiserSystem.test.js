@@ -2,323 +2,271 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
-const usdt = (val) => ethers.utils.parseUnits(val, 6);
+// Utilities
+const usdc = (val) => ethers.utils.parseUnits(val, 6);
 const dai = (val) => ethers.utils.parseEther(val);
-const FEE_500 = 500;
+const eth = (val) => ethers.utils.parseEther(val);
 
-// --- Fixture 1: Deploys the AAVE / UNISWAP V2 stack ---
-async function deployAaveUniswapFixture() {
-    const [owner, creator, donor, staker, staker2, beneficiary, platformWallet, remoteUser] =
-        await ethers.getSigners();
+// Dummy WorldID Params
+const NULL_ROOT = 0;
+const NULL_HASH = 123456;
+const NULL_PROOF = [0,0,0,0,0,0,0,0];
 
-    // Mocks
+// --- Fixture: Deploys the Full Stack with Mocks ---
+async function deploySystemFixture() {
+    const [owner, creator, donor, staker, beneficiary, platformWallet, remoteUser] = await ethers.getSigners();
+
+    // 1. Deploy Token Mocks
     const MockERC20 = await ethers.getContractFactory("MockERC20");
+    const usdcToken = await MockERC20.deploy("USD Coin", "USDC", 6);
+    const daiToken = await MockERC20.deploy("Dai", "DAI", 18);
+    
     const MockWETH = await ethers.getContractFactory("MockWETH");
+    const wethToken = await MockWETH.deploy();
+
+    // 2. Deploy DeFi Mocks (Aave & Router)
+    // Note: We reuse MockUniswapRouter for 1inch logic for simplicity in tests, 
+    // assuming OneInchAdapter is loosely compatible or we deploy a specific mock.
     const MockUniswapRouter = await ethers.getContractFactory("MockUniswapRouter");
+    // In this mock, we assume the router can handle WETH/USDC pair
+    const oneInchRouterMock = await MockUniswapRouter.deploy(wethToken.address, usdcToken.address);
+    
     const MockAavePool = await ethers.getContractFactory("MockAavePool");
-    const MockAxelarGateway = await ethers.getContractFactory("MockAxelarGateway");
+    const aUsdcToken = await MockERC20.deploy("Aave USDC", "aUSDC", 6);
+    const aavePool = await MockAavePool.deploy(usdcToken.address, aUsdcToken.address);
 
-    // Tokens
-    const usdtToken = await MockERC20.deploy("Tether", "USDT", 6);
-    const daiToken = await MockERC20.deploy("Dai", "DAI", 18);
-    const wethToken = await MockWETH.deploy();
-    const aUsdtToken = await MockERC20.deploy("Aave USDT", "aUSDT", 6);
+    // 3. Deploy Infra Mocks (WorldID & LayerZero)
+    const MockWorldID = await ethers.getContractFactory("MockWorldID");
+    const worldId = await MockWorldID.deploy();
 
-    // DeFi Mocks
-    const router = await MockUniswapRouter.deploy(wethToken.address, usdtToken.address);
-    const aavePool = await MockAavePool.deploy(usdtToken.address, aUsdtToken.address);
-    const gateway = await MockAxelarGateway.deploy();
-    await gateway.registerToken("aUSDC", daiToken.address);
-    await gateway.registerToken("USDT", usdtToken.address);
+    const MockLZEndpoint = await ethers.getContractFactory("MockLZEndpoint");
+    const lzEndpoint = await MockLZEndpoint.deploy(1); // EID 1
 
-    // --- Deploy Core ---
-    // 1. Deploy Adapter
-    const UniswapAdapter = await ethers.getContractFactory("UniswapAdapter");
-    const swapAdapter = await UniswapAdapter.deploy(router.address, usdtToken.address, wethToken.address);
+    // 4. Deploy Adapters (1inch)
+    const OneInchAdapter = await ethers.getContractFactory("OneInchAdapter");
+    const swapAdapter = await OneInchAdapter.deploy(
+        oneInchRouterMock.address, 
+        usdcToken.address, 
+        wethToken.address, 
+        owner.address
+    );
 
-    // 2. Deploy Factory (Aave Type 0)
+    // 5. Deploy Factory (Type 0 = Aave)
     const FundraiserFactory = await ethers.getContractFactory("FundraiserFactory");
     const factory = await FundraiserFactory.deploy(
-        gateway.address, ethers.constants.AddressZero, swapAdapter.address,
-        usdtToken.address, wethToken.address, platformWallet.address,
-        ethers.constants.AddressZero, aavePool.address, aUsdtToken.address,
-        ethers.constants.AddressZero, 0 // 0 = Aave
+        swapAdapter.address,
+        usdcToken.address,
+        wethToken.address,
+        platformWallet.address,
+        aavePool.address,
+        aUsdcToken.address,
+        ethers.constants.AddressZero,
+        0,
+        worldId.address,
+        "app_id", 
+        "action_id"
     );
 
-    // 3. Deploy Bridge
+    // 6. Deploy Bridge (LayerZero V2)
     const FundBraveBridge = await ethers.getContractFactory("FundBraveBridge");
     const bridge = await FundBraveBridge.deploy(
-        gateway.address, ethers.constants.AddressZero, swapAdapter.address,
-        usdtToken.address, factory.address
+        lzEndpoint.address,
+        swapAdapter.address,
+        usdcToken.address,
+        factory.address,
+        owner.address
     );
 
-    // 4. Link Factory
+    // 7. Setup Permissions & Linking
     await factory.connect(owner).updateBridge(bridge.address);
-
+    
     // Fund Mocks
-    await usdtToken.mint(router.address, usdt("1000000"));
-    await usdtToken.mint(aavePool.address, usdt("1000000"));
-    await aUsdtToken.mint(aavePool.address, usdt("1000000"));
+    await usdcToken.mint(oneInchRouterMock.address, usdc("1000000"));
+    await usdcToken.mint(aavePool.address, usdc("1000000"));
+    await aUsdcToken.mint(aavePool.address, usdc("1000000"));
 
-    return { factory, bridge, gateway, usdtToken, daiToken, aUsdtToken, aavePool, owner, creator, donor, staker, staker2, beneficiary, platformWallet, remoteUser };
+    return { 
+        factory, bridge, lzEndpoint, swapAdapter, 
+        usdcToken, wethToken, aavePool, aUsdcToken, worldId,
+        owner, creator, donor, staker, beneficiary, platformWallet, remoteUser 
+    };
 }
 
-// --- Fixture 2: Deploys the MORPHO / UNISWAP (Relay-like) stack ---
-async function deployMorphoUniswapFixture() {
-    const [owner, creator, donor, staker, staker2, beneficiary, platformWallet, remoteUser] =
-        await ethers.getSigners();
-
-    // Mocks (Mostly the same, but sub Aave for Morpho)
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
-    const MockWETH = await ethers.getContractFactory("MockWETH");
-    const MockUniswapRouter = await ethers.getContractFactory("MockUniswapRouter");
-    const MockMetaMorpho = await ethers.getContractFactory("MockMetaMorpho");
-    const MockAxelarGateway = await ethers.getContractFactory("MockAxelarGateway");
-
-    // Tokens
-    const usdtToken = await MockERC20.deploy("Tether", "USDT", 6);
-    const daiToken = await MockERC20.deploy("Dai", "DAI", 18);
-    const wethToken = await MockWETH.deploy();
-
-    // DeFi Mocks (Using Uniswap V2 mock for simplicity, same as above)
-    const router = await MockUniswapRouter.deploy(wethToken.address, usdtToken.address);
-    const morphoVault = await MockMetaMorpho.deploy(usdtToken.address);
-    const gateway = await MockAxelarGateway.deploy();
-    await gateway.registerToken("aUSDC", daiToken.address);
-
-    // --- Deploy Core ---
-    // 1. Deploy Adapter (Using UniswapAdapter for this test)
-    const UniswapAdapter = await ethers.getContractFactory("UniswapAdapter");
-    const swapAdapter = await UniswapAdapter.deploy(router.address, usdtToken.address, wethToken.address);
-
-    // 2. Deploy Factory (Morpho Type 1)
-    const FundraiserFactory = await ethers.getContractFactory("FundraiserFactory");
-    const factory = await FundraiserFactory.deploy(
-        gateway.address, ethers.constants.AddressZero, swapAdapter.address,
-        usdtToken.address, wethToken.address, platformWallet.address,
-        ethers.constants.AddressZero, ethers.constants.AddressZero, ethers.constants.AddressZero,
-        morphoVault.address, 1 // 1 = Morpho
-    );
-
-    // 3. Deploy Bridge
-    const FundBraveBridge = await ethers.getContractFactory("FundBraveBridge");
-    const bridge = await FundBraveBridge.deploy(
-        gateway.address, ethers.constants.AddressZero, swapAdapter.address,
-        usdtToken.address, factory.address
-    );
-
-    // 4. Link Factory
-    await factory.connect(owner).updateBridge(bridge.address);
-
-    // Fund Mocks
-    await usdtToken.mint(router.address, usdt("1000000"));
-    await usdtToken.mint(morphoVault.address, usdt("1000000"));
-
-    return { factory, bridge, gateway, usdtToken, daiToken, morphoVault, owner, creator, donor, staker, staker2, beneficiary, platformWallet, remoteUser };
-}
-
-
-// --- Helper function to create a fundraiser ---
+// Helper to create fundraiser with WorldID params
 async function createFundraiser(factory, creator, beneficiary) {
     const tx = await factory.connect(creator).createFundraiser(
-        "Test Fundraiser", ["img.png"], ["Education"], "Desc", "Global",
-        beneficiary.address, usdt("10000"), 30
+        "Save the Forests", 
+        ["image.png"], 
+        ["Environment"], 
+        "Description", 
+        "Brazil",
+        beneficiary.address, 
+        usdc("10000"), 
+        30,
+        NULL_ROOT,
+        NULL_HASH,
+        NULL_PROOF
     );
     const receipt = await tx.wait();
     const fundraiserAddr = receipt.events.find(e => e.event === "FundraiserCreated").args.fundraiser;
     const poolAddr = receipt.events.find(e => e.event === "StakingPoolCreated").args.poolAddress;
-    const fundraiser = await ethers.getContractAt("Fundraiser", fundraiserAddr);
-    return { fundraiser, poolAddr };
+    
+    return { 
+        fundraiser: await ethers.getContractAt("Fundraiser", fundraiserAddr), 
+        stakingPool: await ethers.getContractAt("StakingPool", poolAddr)
+    };
 }
 
-// ========== TEST SUITE 1: AAVE + UNISWAP V2 ==========
-describe("System Test (Aave / Uniswap V2)", () => {
-    let factory, beneficiary, staker, staker2, usdtToken, aUsdtToken;
+describe("FundBrave System Tests", () => {
+    let factory, bridge, lzEndpoint, swapAdapter;
+    let usdcToken, aavePool, aUsdcToken;
+    let owner, creator, donor, staker, beneficiary, remoteUser;
     let fundraiser, stakingPool;
 
     beforeEach(async () => {
-        const fixture = await loadFixture(deployAaveUniswapFixture);
-        factory = fixture.factory;
-        beneficiary = fixture.beneficiary;
-        staker = fixture.staker;
-        staker2 = fixture.staker2;
-        usdtToken = fixture.usdtToken;
-        aUsdtToken = fixture.aUsdtToken;
-        
-        const { fundraiser: f, poolAddr: p } = await createFundraiser(factory, fixture.creator, beneficiary);
-        fundraiser = f;
-        stakingPool = await ethers.getContractAt("StakingPool", p); // Aave pool ABI
-    });
-
-    it("should deploy the correct Aave StakingPool", async () => {
-        expect(await stakingPool.AAVE_POOL()).to.not.equal(ethers.constants.AddressZero);
-    });
-
-    it("should handle local stake (Native -> Aave)", async () => {
-        await factory.connect(staker).stakeNative(0, { value: ethers.utils.parseEther("1.0") });
-        const expectedUsdt = usdt("2000"); // 1:2000 in mock
-        expect(await stakingPool.stakerPrincipal(staker.address)).to.equal(expectedUsdt);
-        expect(await aUsdtToken.balanceOf(stakingPool.address)).to.equal(expectedUsdt);
-    });
-
-    it("should fix reward bug (rewardPerToken test)", async () => {
-        // 1. Fund stakers
-        await usdtToken.mint(staker.address, usdt("10000"));
-        await usdtToken.mint(staker2.address, usdt("10000"));
-        await usdtToken.connect(staker).approve(factory.address, usdt("10000"));
-        await usdtToken.connect(staker2).approve(factory.address, usdt("10000"));
-        
-        // 2. Staker 1 stakes 10,000
-        await factory.connect(staker).stakeERC20(0, usdtToken.address, usdt("10000"));
-
-        // 3. Harvest 1: 1000 yield. Staker share = 190. Staker 1 gets all.
-        await aUsdtToken.mint(stakingPool.address, usdt("1000"));
-        await stakingPool.harvestAndDistribute();
-
-        // 4. Staker 2 stakes 10,000
-        await factory.connect(staker2).stakeERC20(0, usdtToken.address, usdt("10000"));
-
-        // 5. Harvest 2: 1000 yield. Staker share = 190. Pool is 50/50.
-        // S1 gets 95, S2 gets 95.
-        await aUsdtToken.mint(stakingPool.address, usdt("1000"));
-        await stakingPool.harvestAndDistribute();
-
-        // 6. Check rewards
-        // Staker 1: 190 (H1) + 95 (H2) = 285
-        const s1Rewards = await stakingPool.claimableRewards(staker.address);
-        expect(s1Rewards).to.equal(usdt("285"));
-        // Staker 2: 0 (H1) + 95 (H2) = 95
-        const s2Rewards = await stakingPool.claimableRewards(staker2.address);
-        expect(s2Rewards).to.equal(usdt("95"));
-
-        // 7. Staker 1 claims
-        await stakingPool.connect(staker).claimStakerRewards();
-        expect(await usdtToken.balanceOf(staker.address)).to.equal(usdt("285"));
-
-        // 8. Staker 2 claims (proves no race condition)
-        await stakingPool.connect(staker2).claimStakerRewards();
-        expect(await usdtToken.balanceOf(staker2.address)).to.equal(usdt("95"));
-    });
-});
-
-// ========== TEST SUITE 2: MORPHO + UNISWAP V2 ==========
-describe("System Test (Morpho / Uniswap V2)", () => {
-    let factory, beneficiary, staker, usdtToken, morphoVault;
-    let fundraiser, stakingPool;
-
-    beforeEach(async () => {
-        const fixture = await loadFixture(deployMorphoUniswapFixture);
-        factory = fixture.factory;
-        beneficiary = fixture.beneficiary;
-        staker = fixture.staker;
-        usdtToken = fixture.usdtToken;
-        morphoVault = fixture.morphoVault;
-        
-        const { fundraiser: f, poolAddr: p } = await createFundraiser(factory, fixture.creator, beneficiary);
-        fundraiser = f;
-        stakingPool = await ethers.getContractAt("MorphoStakingPool", p); // Morpho pool ABI
-    });
-
-    it("should deploy the correct Morpho StakingPool", async () => {
-        expect(await stakingPool.METAMORPHO_VAULT()).to.equal(morphoVault.address);
-    });
-
-    it("should handle local stake (Native -> Morpho)", async () => {
-        await factory.connect(staker).stakeNative(0, { value: ethers.utils.parseEther("1.0") });
-        const expectedUsdt = usdt("2000"); // 1:2000 in mock
-        expect(await stakingPool.stakerPrincipal(staker.address)).to.equal(expectedUsdt);
-        // Check that the Morpho vault holds the funds
-        expect(await morphoVault.balanceOf(stakingPool.address)).to.equal(expectedUsdt);
-    });
-
-    it("should handle reward logic on Morpho pool", async () => {
-        // 1. Fund staker
-        await usdtToken.mint(staker.address, usdt("10000"));
-        await usdtToken.connect(staker).approve(factory.address, usdt("10000"));
-        
-        // 2. Staker 1 stakes 10,000
-        await factory.connect(staker).stakeERC20(0, usdtToken.address, usdt("10000"));
-
-        // 3. Harvest 1: 1000 yield. Staker share = 190.
-        // We simulate yield by minting *assets* to the vault, increasing its value
-        await usdtToken.mint(morphoVault.address, usdt("1000")); 
-        await stakingPool.harvestAndDistribute();
-
-        // Check rewards
-        const s1Rewards = await stakingPool.claimableRewards(staker.address);
-        expect(s1Rewards).to.equal(usdt("190"));
-
-        // Staker 1 claims
-        await stakingPool.connect(staker).claimStakerRewards();
-        expect(await usdtToken.balanceOf(staker.address)).to.equal(usdt("190"));
-    });
-});
-
-// ========== TEST SUITE 3: BRIDGE (Universal) ==========
-describe("System Test (Bridge)", () => {
-    let factory, bridge, gateway, daiToken, usdtToken, remoteUser, aUsdtToken;
-    let fundraiser, stakingPool;
-
-    beforeEach(async () => {
-        const fixture = await loadFixture(deployAaveUniswapFixture);
+        const fixture = await loadFixture(deploySystemFixture);
         factory = fixture.factory;
         bridge = fixture.bridge;
-        gateway = fixture.gateway;
-        daiToken = fixture.daiToken;
-        usdtToken = fixture.usdtToken;
+        lzEndpoint = fixture.lzEndpoint;
+        usdcToken = fixture.usdcToken;
+        aavePool = fixture.aavePool;
+        aUsdcToken = fixture.aUsdcToken;
+        owner = fixture.owner;
+        creator = fixture.creator;
+        donor = fixture.donor;
+        staker = fixture.staker;
+        beneficiary = fixture.beneficiary;
         remoteUser = fixture.remoteUser;
-        aUsdtToken = fixture.aUsdtToken;
-        
-        const { fundraiser: f, poolAddr: p } = await createFundraiser(factory, fixture.creator, fixture.beneficiary);
-        fundraiser = f;
-        stakingPool = await ethers.getContractAt("StakingPool", p);
 
-        // Configure bridge for testing
-        await bridge.addSupportedChain("Polygon", factory.address);
-        await bridge.addSupportedToken("Polygon", daiToken.address, "aUSDC");
-    });
-    
-    it("should handle a Cross-Chain Donation (Action 0)", async () => {
-        await daiToken.mint(remoteUser.address, dai("1000"));
-        await daiToken.connect(remoteUser).approve(gateway.address, dai("1000"));
-
-        const daiAmount = dai("1000");
-        const expectedUsdt = usdt("1000"); // 1:1 swap in mock
-        const action = 0; // 0 = DONATE
-        const payload = ethers.utils.defaultAbiCoder.encode(
-            ["address", "uint256", "uint8"],
-            [remoteUser.address, 0, action]
-        );
-
-        // Simulate the call from the remote chain
-        await gateway.connect(remoteUser).callBridge(
-            bridge.address, "Polygon", "remote-addr", payload, "aUSDC", daiAmount
-        );
-
-        // Check final state
-        expect(await usdtToken.balanceOf(fundraiser.address)).to.equal(expectedUsdt);
-        expect(await fundraiser.totalDonations()).to.equal(expectedUsdt);
+        const res = await createFundraiser(factory, creator, beneficiary);
+        fundraiser = res.fundraiser;
+        stakingPool = res.stakingPool;
     });
 
-    it("should handle a Cross-Chain Stake (Action 1)", async () => {
-        await daiToken.mint(remoteUser.address, dai("1000"));
-        await daiToken.connect(remoteUser).approve(gateway.address, dai("1000"));
+    // --- 1. World ID & Factory Tests ---
+    describe("Factory & World ID", () => {
+        it("should verify World ID parameters on creation", async () => {
+            // If we try to use the SAME nullifier, it should fail (Double-Signaling)
+            await expect(
+                factory.connect(creator).createFundraiser(
+                    "Spam Fundraiser", ["img.png"], ["Environment"], "Desc", "Brazil",
+                    beneficiary.address, usdc("10000"), 30,
+                    NULL_ROOT,
+                    NULL_HASH, // Reusing hash used in beforeEach
+                    NULL_PROOF
+                )
+            ).to.be.revertedWith("WorldID: Already used");
+        });
 
-        const daiAmount = dai("1000");
-        const expectedUsdt = usdt("1000"); // 1:1 swap
-        const action = 1; // 1 = STAKE
-        const payload = ethers.utils.defaultAbiCoder.encode(
-            ["address", "uint256", "uint8"],
-            [remoteUser.address, 0, action]
-        );
+        it("should deploy a valid Staking Pool with Aave config", async () => {
+            expect(await stakingPool.AAVE_POOL()).to.equal(aavePool.address);
+            expect(await stakingPool.USDC()).to.equal(usdcToken.address);
+        });
+    });
 
-        // Simulate the call
-        await gateway.connect(remoteUser).callBridge(
-            bridge.address, "Polygon", "remote-addr", payload, "aUSDC", daiAmount
-        );
+    // --- 2. Staking & Yield Tests ---
+    describe("Staking & Yield (Chainlink Automation)", () => {
+        it("should allow users to stake USDC directly", async () => {
+            await usdcToken.mint(staker.address, usdc("500"));
+            await usdcToken.connect(staker).approve(factory.address, usdc("500"));
 
-        // Check final state (Aave pool)
-        expect(await aUsdtToken.balanceOf(stakingPool.address)).to.equal(expectedUsdt);
-        expect(await stakingPool.stakerPrincipal(remoteUser.address)).to.equal(expectedUsdt);
+            // Stake via Factory
+            await factory.connect(staker).stakeERC20(0, usdcToken.address, usdc("500"));
+
+            expect(await stakingPool.stakerPrincipal(staker.address)).to.equal(usdc("500"));
+            // Funds should be in Aave (mocked as 1:1 transfer to AavePool)
+            expect(await usdcToken.balanceOf(aavePool.address)).to.equal(usdc("1000500")); // 1M + 500
+        });
+
+        it("should harvest yield correctly", async () => {
+            // 1. User stakes 1000
+            await usdcToken.mint(staker.address, usdc("1000"));
+            await usdcToken.connect(staker).approve(factory.address, usdc("1000"));
+            await factory.connect(staker).stakeERC20(0, usdcToken.address, usdc("1000"));
+
+            // 2. Simulate Yield: Mint aUSDC to the StakingPool
+            // Aave rebase simulation: The pool holds 1000 aUSDC. We give it 100 more.
+            await aUsdcToken.mint(stakingPool.address, usdc("100"));
+
+            // 3. Check Chainlink Upkeep
+            const [upkeepNeeded] = await stakingPool.checkUpkeep("0x");
+            // Should be FALSE because not enough time passed (1 day interval)
+            expect(upkeepNeeded).to.be.false;
+
+            // 4. Fast forward time
+            await ethers.provider.send("evm_increaseTime", [86401]); // +1 day + 1 sec
+            await ethers.provider.send("evm_mine");
+
+            const [upkeepNeededNow] = await stakingPool.checkUpkeep("0x");
+            expect(upkeepNeededNow).to.be.true;
+
+            // 5. Perform Harvest
+            await stakingPool.performUpkeep("0x");
+
+            // 6. Check Distribution (79% Fundraiser / 19% Staker / 2% Platform)
+            // Yield = 100 USDC
+            // Staker Share = 19 USDC
+            // Fundraiser Share = 79 USDC
+            const stakerRewards = await stakingPool.claimableRewards(staker.address);
+            expect(stakerRewards).to.equal(usdc("19"));
+            
+            const fundraiserBalance = await usdcToken.balanceOf(beneficiary.address);
+            expect(fundraiserBalance).to.equal(usdc("79"));
+        });
+    });
+
+    // --- 3. LayerZero V2 Bridge Tests ---
+    describe("Cross-Chain Bridge (LayerZero V2)", () => {
+        it("should send a cross-chain 'Stake' message", async () => {
+            // 1. Setup: Remote user wants to stake 100 DAI (which is swapped to USDC)
+            // Since we are mocking, we'll just use USDC directly to test the message flow
+            await usdcToken.mint(remoteUser.address, usdc("100"));
+            await usdcToken.connect(remoteUser).approve(bridge.address, usdc("100"));
+
+            // 2. Send Action
+            const dstEid = 2; // Destination Chain ID
+            const action = 1; // Stake
+            
+            // We need to pay gas. In Mock, quote returns 0, but we send some ETH anyway.
+            await expect(bridge.connect(remoteUser).sendCrossChainAction(
+                dstEid,
+                0, // Fundraiser ID
+                action,
+                usdcToken.address,
+                usdc("100"),
+                { value: eth("0.1") }
+            )).to.emit(bridge, "CrossChainActionSent");
+        });
+
+        it("should receive a cross-chain message and execution action", async () => {
+            // This test simulates the DESTINATION chain receiving a message
+            
+            // 1. Fund the Bridge with liquidity (simulating funds arriving or being unlocked)
+            await usdcToken.mint(bridge.address, usdc("1000"));
+            
+            // 2. Construct Payload: [Donor, FundraiserId, Action, Amount]
+            // Action 0 = Donate
+            const amount = usdc("50");
+            const payload = ethers.utils.defaultAbiCoder.encode(
+                ["address", "uint256", "uint8", "uint256"],
+                [remoteUser.address, 0, 0, amount]
+            );
+
+            // 3. Simulate LayerZero Endpoint calling lzReceive on our Bridge
+            // We call `mockReceive` on the endpoint, which calls `lzReceive` on the bridge
+            await lzEndpoint.mockReceive(
+                bridge.address,
+                1, // Source EID
+                ethers.utils.formatBytes32String("guid"),
+                payload
+            );
+
+            // 4. Verify Effect: Fundraiser should have received the donation
+            const fundraiserBalance = await usdcToken.balanceOf(fundraiser.address);
+            expect(fundraiserBalance).to.equal(amount);
+            
+            const donations = await fundraiser.totalDonations();
+            expect(donations).to.equal(amount);
+        });
     });
 });

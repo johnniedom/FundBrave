@@ -1,0 +1,75 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "MockWorldID",
+  "sourceName": "contracts/test/MockWorldID.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bool",
+          "name": "_shouldRevert",
+          "type": "bool"
+        }
+      ],
+      "name": "setShouldRevert",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "shouldRevert",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "root",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "groupID",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "signal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nullifierHash",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "externalNullifier",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[8]",
+          "name": "proof",
+          "type": "uint256[8]"
+        }
+      ],
+      "name": "verifyProof",
+      "outputs": [],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608080604052346100165761011d908161001c8239f35b600080fdfe6080806040526004361015601257600080fd5b600090813560e01c9081633bc778e314608f575080636813d7871460605763d3072d8214603e57600080fd5b34605d5780600319360112605d5760ff60209154166040519015158152f35b80fd5b5034605d576020366003190112605d57600435801515809103608b5760ff8019835416911617815580f35b5080fd5b905034608b576101a0366003190112608b57366101a411608b5760ff82541660b5575080f35b62461bcd60e51b815260206004820152600d60248201526c24b73b30b634b210283937b7b360991b6044820152606490fdfea26469706673582212209fc0aef861f29e7d0c9aa516ff2e3bcd0dd322461c11263ae5a5f0d8ed5ac12264736f6c63430008140033",
+  "deployedBytecode": "0x6080806040526004361015601257600080fd5b600090813560e01c9081633bc778e314608f575080636813d7871460605763d3072d8214603e57600080fd5b34605d5780600319360112605d5760ff60209154166040519015158152f35b80fd5b5034605d576020366003190112605d57600435801515809103608b5760ff8019835416911617815580f35b5080fd5b905034608b576101a0366003190112608b57366101a411608b5760ff82541660b5575080f35b62461bcd60e51b815260206004820152600d60248201526c24b73b30b634b210283937b7b360991b6044820152606490fdfea26469706673582212209fc0aef861f29e7d0c9aa516ff2e3bcd0dd322461c11263ae5a5f0d8ed5ac12264736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

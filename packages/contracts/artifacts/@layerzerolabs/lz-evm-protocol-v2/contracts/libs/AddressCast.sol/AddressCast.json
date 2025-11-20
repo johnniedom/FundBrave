@@ -1,0 +1,21 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "AddressCast",
+  "sourceName": "@layerzerolabs/lz-evm-protocol-v2/contracts/libs/AddressCast.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "AddressCast_InvalidAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "AddressCast_InvalidSizeForAddress",
+      "type": "error"
+    }
+  ],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea2646970667358221220ce0758127e59696e32a4ca1bf762981cb2ef243db682056bbf391fee80a7bf9c64736f6c63430008140033",
+  "deployedBytecode": "0x600080fdfea2646970667358221220ce0758127e59696e32a4ca1bf762981cb2ef243db682056bbf391fee80a7bf9c64736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

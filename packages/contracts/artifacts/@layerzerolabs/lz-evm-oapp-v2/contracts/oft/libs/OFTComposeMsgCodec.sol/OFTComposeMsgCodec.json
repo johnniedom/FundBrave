@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "OFTComposeMsgCodec",
+  "sourceName": "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol",
+  "abi": [],
+  "bytecode": "0x60808060405234601757603a9081601d823930815050f35b600080fdfe600080fdfea2646970667358221220482865f65535ab7f707feaab3419b40b9ba92e3aada18922aa040f3336a9cbb464736f6c63430008140033",
+  "deployedBytecode": "0x600080fdfea2646970667358221220482865f65535ab7f707feaab3419b40b9ba92e3aada18922aa040f3336a9cbb464736f6c63430008140033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
