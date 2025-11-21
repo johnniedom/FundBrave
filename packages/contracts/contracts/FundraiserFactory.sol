@@ -8,9 +8,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./interfaces/ISwapAdapter.sol";
-import "./Fundraiser.sol";
-import "./StakingPool.sol";
-import "./MorphoStakingPool.sol";
+
+import { Fundraiser } from "./Fundraiser.sol";
+import { StakingPool } from "./StakingPool.sol";
+import { MorphoStakingPool } from "./MorphoStakingPool.sol";
 
 interface IWorldID {
     function verifyProof(
@@ -25,16 +26,18 @@ interface IWorldID {
 
 /**
  * @title FundraiserFactory
- * @dev Uses Clones (Minimal Proxies) to deploy Fundraisers cheaply and stay within size limits.
+ * @dev Uses Clones for Fundraiser and StakingPool to minimize contract size.
+ * MorphoStakingPool is currently deployed normally (not cloned).
  */
 contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant VERIFIED_CREATOR_ROLE = keccak256("VERIFIED_CREATOR_ROLE");
     using SafeERC20 for IERC20;
-    using Clones for address; // Enable cloning logic
+    using Clones for address;
     
     // --- Implementations for Clones ---
     address public immutable fundraiserImplementation;
+    address public immutable stakingPoolImplementation;
 
     // --- State Variables ---
     Fundraiser[] private _fundraisers;
@@ -52,6 +55,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     address public immutable WETH;
     address public platformFeeRecipient;
     address public fundBraveBridge;
+    address public receiptOFT; // Needed for StakingPools
     
     // --- Yield Config ---
     address public immutable AAVE_POOL;
@@ -85,9 +89,11 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     event CategoryAdded(string category);
     event PlatformFeeRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
     event BridgeUpdated(address indexed newBridge);
+    event ReceiptOFTUpdated(address indexed newReceiptOFT);
 
     constructor(
-        address _fundraiserImplementation, // Passed from deploy script
+        address _fundraiserImplementation,
+        address _stakingPoolImplementation,
         address _swapAdapter,
         address _usdc,
         address _weth,
@@ -100,8 +106,11 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         string memory _appId,
         string memory _actionId
     ) {
-        require(_fundraiserImplementation != address(0), "Invalid implementation");
+        require(_fundraiserImplementation != address(0), "Invalid impl");
+        require(_stakingPoolImplementation != address(0), "Invalid impl");
+        
         fundraiserImplementation = _fundraiserImplementation;
+        stakingPoolImplementation = _stakingPoolImplementation;
         
         swapAdapter = ISwapAdapter(_swapAdapter);
         USDC = _usdc;
@@ -135,6 +144,12 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         _;
     }
 
+    // --- Helper to set ReceiptOFT after deployment
+    function setReceiptOFT(address _receiptOFT) external onlyRole(ADMIN_ROLE) {
+        receiptOFT = _receiptOFT;
+        emit ReceiptOFTUpdated(_receiptOFT);
+    }
+
     function createFundraiser(
         string memory name,
         string[] memory images,
@@ -162,10 +177,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         }
 
         _validateFundraiserParams(name, images, categories, description, beneficiary, goal, durationInDays);
-        
         uint256 deadline = block.timestamp + (durationInDays * 1 days);
         
-        // --- CLONE DEPLOYMENT ---
+        // --- CLONE DEPLOYMENT (Fundraiser) ---
         address clone = fundraiserImplementation.clone();
         Fundraiser(clone).initialize(
             currentId,
@@ -187,6 +201,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         _fundraisers.push(fundraiser);
         _fundraisersByOwner[msg.sender].push(fundraiser);
 
+        // --- DEPLOY STAKING POOL ---
         address poolAddress = _deployStakingPool(beneficiary);
         stakingPools[currentId] = poolAddress;
         activeFundraisers[currentId] = true;
@@ -217,7 +232,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         
         uint256 deadline = block.timestamp + (durationInDays * 1 days);
         
-        // --- CLONE DEPLOYMENT ---
         address clone = fundraiserImplementation.clone();
         Fundraiser(clone).initialize(
             currentId,
@@ -253,7 +267,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         return address(fundraiser);
     }
 
-    // Moved validation logic to internal function to reduce main function size
     function _validateFundraiserParams(
         string memory name,
         string[] memory images,
@@ -275,21 +288,24 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         }
     }
 
-    // NOTE: Keeping Staking Pools as standard 'new' deployments for now as they are smaller.
     function _deployStakingPool(address beneficiary) internal returns (address) {
         if (stakingPoolType == 0) {
+            // --- CLONE DEPLOYMENT (Aave StakingPool) ---
             require(AAVE_POOL != address(0), "Factory: Aave not configured");
-            StakingPool pool = new StakingPool(
+            address pool = stakingPoolImplementation.clone();
+            StakingPool(pool).initialize(
                 AAVE_POOL,
                 USDC,
                 A_USDC,
+                receiptOFT, // Correctly passed
                 payable(beneficiary),
                 platformFeeRecipient,
                 address(this),
                 msg.sender
             );
-            return address(pool);
+            return pool;
         } else if (stakingPoolType == 1) {
+            // --- STANDARD DEPLOYMENT (Morpho) ---
             require(MORPHO_VAULT != address(0), "Factory: Morpho not configured");
             MorphoStakingPool pool = new MorphoStakingPool(
                 MORPHO_VAULT,
@@ -304,7 +320,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
             revert("Factory: Invalid staking pool type");
         }
     }
-    
+
     function stakeNative(uint256 fundraiserId) external payable nonReentrant whenNotPaused {
         require(msg.value > 0, "Value must be > 0");
         address poolAddress = stakingPools[fundraiserId];

@@ -6,11 +6,10 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title FundraiserReceiptOFT
- * @dev A cross-chain "Receipt Token" for stakers.
- * When you stake USDC, you get this OFT as proof.
- * You can bridge this receipt back to your home chain!
+ * @dev Cross-chain Receipt Token. Minter/Burner access controlled.
  */
 contract ReceiptOFT is OFT {
+    // Only the Staking Pools or Factory can mint/burn
     mapping(address => bool) public controllers;
 
     constructor(
@@ -25,7 +24,12 @@ contract ReceiptOFT is OFT {
     }
 
     function mint(address _to, uint256 _amount) external {
-        require(controllers[msg.sender], "Not authorized to mint");
+        require(controllers[msg.sender], "Not authorized");
         _mint(_to, _amount);
+    }
+
+    function burn(address _from, uint256 _amount) external {
+        require(controllers[msg.sender], "Not authorized");
+        _burn(_from, _amount);
     }
 }

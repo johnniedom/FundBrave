@@ -108,7 +108,7 @@ contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         string memory _description,
         string memory _region,
         address payable _beneficiary,
-        address _creator, // Acts as custodian/owner
+        address _creator,
         uint256 _goal,
         uint256 _deadline,
         address _usdc,

@@ -43,8 +43,9 @@ contract FundBraveBridge is OApp, ReentrancyGuard {
         address _localFundraiserFactory,
         address _owner
     ) 
-        OApp(_endpoint, _owner) 
+        OApp(_endpoint, _owner)
         Ownable(_owner)
+        ReentrancyGuard()
     { 
         require(_endpoint != address(0), "Invalid Endpoint");
         require(_swapAdapter != address(0), "Invalid Adapter");

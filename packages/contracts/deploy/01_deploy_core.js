@@ -109,96 +109,68 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const chainId = network.config.chainId;
   const config = networkConfig[chainId];
 
-  if (!config) {
-    log(`Skipping deployment: Chain ID ${chainId} not configured.`);
-    return;
-  }
+  if (!config) return;
 
-  log(`Deploying to ${config.name} (Chain ID: ${chainId})...`);
-
+  log(`Deploying to ${config.name}...`);
   if (chainId === 31337) return; 
 
-  // 1. Deploy Adapter
+  // 1. Adapter
   let swapAdapterAddress;
   if (config.swapAdapterType === "1inch") {
       const d = await deploy("OneInchAdapter", { 
-        from: deployer, 
-        args: [config.oneInchRouter, config.usdc, config.weth, deployer],
-        log: true 
+        from: deployer, args: [config.oneInchRouter, config.usdc, config.weth, deployer], log: true 
       });
       swapAdapterAddress = d.address;
   } else if (config.swapAdapterType === "cowswap") {
       const d = await deploy("CowSwapAdapter", { 
-        from: deployer, 
-        args: [config.cowBatcher, config.usdc, config.weth, deployer],
-        log: true 
+        from: deployer, args: [config.cowBatcher, config.usdc, config.weth, deployer], log: true 
       });
       swapAdapterAddress = d.address;
   }
 
-  // 2. Deploy Fundraiser Implementation (For Clones)
-  log("Deploying Fundraiser Implementation...");
-  const fundraiserImpl = await deploy("Fundraiser", {
-      from: deployer,
-      args: [], // Constructor is empty now!
-      log: true
-  });
+  // 2. Impls
+  const fundraiserImpl = await deploy("Fundraiser", { from: deployer, args: [], log: true });
+  const stakingPoolImpl = await deploy("StakingPool", { from: deployer, args: [], log: true });
 
-  // 3. Deploy Factory (Passing Implementation Address)
-  log("Deploying FundraiserFactory...");
+  // 3. Factory
   const factory = await deploy("FundraiserFactory", {
     from: deployer,
     args: [
-        fundraiserImpl.address, // <--- NEW PARAM
-        swapAdapterAddress,
-        config.usdc,
-        config.weth,
-        platformWallet || deployer,
-        config.aavePool || ethers.constants.AddressZero,
-        config.aUsdc || ethers.constants.AddressZero,
-        config.morphoVault || ethers.constants.AddressZero,
-        config.stakingPoolType,
-        config.worldId || ethers.constants.AddressZero,
-        "app_staging_id", 
-        "create_fundraiser" 
+        fundraiserImpl.address, stakingPoolImpl.address, swapAdapterAddress, config.usdc, config.weth,
+        platformWallet || deployer, config.aavePool || ethers.constants.AddressZero,
+        config.aUsdc || ethers.constants.AddressZero, config.morphoVault || ethers.constants.AddressZero,
+        config.stakingPoolType, config.worldId || ethers.constants.AddressZero,
+        "app_staging_id", "create_fundraiser"
     ],
     log: true
   });
 
-  // 4. Deploy Bridge
-  log("Deploying FundBraveBridge...");
+  // 4. ReceiptOFT (Deploy & Link)
+  const receiptOFT = await deploy("ReceiptOFT", {
+      from: deployer,
+      args: ["Fundraiser Receipt", "rFUND", config.lzEndpoint, deployer],
+      log: true
+  });
+
+  const factoryContract = await ethers.getContractAt("FundraiserFactory", factory.address);
+  // Set ReceiptOFT on Factory
+  if ((await factoryContract.receiptOFT()) === ethers.constants.AddressZero) {
+    log("Linking ReceiptOFT to Factory...");
+    await (await factoryContract.setReceiptOFT(receiptOFT.address)).wait();
+  }
+
+  // 5. Bridge (Deploy & Link)
   await deploy("FundBraveBridge", {
       from: deployer,
-      args: [
-          config.lzEndpoint,
-          swapAdapterAddress,
-          config.usdc,
-          factory.address,
-          deployer
-      ],
+      args: [config.lzEndpoint, swapAdapterAddress, config.usdc, factory.address, deployer],
       log: true
   });
   
-  // 5. Link Bridge
-  const factoryContract = await ethers.getContractAt("FundraiserFactory", factory.address);
   if ((await factoryContract.fundBraveBridge()) === ethers.constants.AddressZero) {
     log("Linking Bridge to Factory...");
     await (await factoryContract.updateBridge((await get("FundBraveBridge")).address)).wait();
   }
 
-  // 6. Deploy ReceiptOFT
-  log("Deploying ReceiptOFT...");
-  await deploy("ReceiptOFT", {
-      from: deployer,
-      args: [
-          "Fundraiser Receipt",
-          "rFUND",
-          config.lzEndpoint,
-          deployer
-      ],
-      log: true
-  });
-
-  log(`Deployment Complete for ${config.name}!`);
+  log(`Deployment Complete!`);
 };
 module.exports.tags = ["core"];

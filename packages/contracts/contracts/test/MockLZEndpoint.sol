@@ -19,11 +19,17 @@ interface ILayerZeroReceiver {
  */
 contract MockLZEndpoint {
     uint32 public eid;
+    address public delegate;
 
     event PacketSent(bytes payload);
 
     constructor(uint32 _eid) {
         eid = _eid;
+    }
+
+    // --- Required by OApp Constructor ---
+    function setDelegate(address _delegate) external {
+        delegate = _delegate;
     }
 
     // Simulate the quote function
@@ -58,6 +64,7 @@ contract MockLZEndpoint {
         bytes32 _guid, 
         bytes calldata _message
     ) external payable {
+        // Construct the Origin struct expected by V2
         Origin memory origin = Origin(_srcEid, bytes32(uint256(uint160(msg.sender))), 1);
         
         ILayerZeroReceiver(_oapp).lzReceive{value: msg.value}(
@@ -65,7 +72,7 @@ contract MockLZEndpoint {
             _guid,
             _message,
             address(0),
-            ""
+            ""  
         );
     }
 }
