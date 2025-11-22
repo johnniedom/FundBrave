@@ -160,9 +160,13 @@ contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         address donor, 
         uint256 amount, 
         string memory sourceChain
-    ) external nonReentrant whenNotPaused onlyFactory {
+    ) external nonReentrant whenNotPaused onlyFactory beforeDeadline {
         _recordDonation(donor, amount, address(usdc), sourceChain);
         emit DonationCredited(donor, amount, sourceChain);
+    }
+
+    function goalReached() public view returns (bool) {
+        return totalDonations >= goal;
     }
 
     function _recordDonation(

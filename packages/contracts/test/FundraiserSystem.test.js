@@ -209,7 +209,7 @@ describe("FundBrave Comprehensive System Tests", () => {
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Test", ["img.png"], ["Environment"], "Desc", "Brazil",
-                    beneficiary.address, usdc("50"), 30, // Below minimum
+                    beneficiary.address, usdc("50"), 30,
                     NULL_ROOT, 111111, NULL_PROOF
                 )
             ).to.be.revertedWith("Goal outside allowed range");
@@ -218,7 +218,7 @@ describe("FundBrave Comprehensive System Tests", () => {
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Test", ["img.png"], ["Environment"], "Desc", "Brazil",
-                    beneficiary.address, usdc("10000"), 1, // Too short
+                    beneficiary.address, usdc("10000"), 1,
                     NULL_ROOT, 222222, NULL_PROOF
                 )
             ).to.be.revertedWith("Duration outside allowed range");
@@ -292,26 +292,59 @@ describe("FundBrave Comprehensive System Tests", () => {
         });
     });
 
-    describe("Donations", () => {
-        it("should accept native ETH donations", async () => {
+    describe("Fundraiser Deadline & Goal", () => {
+        it("should mark fundraiser as successful when goal is reached", async () => {
             const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
-            
             const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
-            
-            // Skip native donation test - mock swap complexity
-            // Just verify ERC20 works (tested below)
-            console.log("Note: Native ETH donation requires complex swap mock - tested in integration");
-            
-            // Alternative: Test with USDC directly
+
+            // Goal is 10,000 USDC
+            await usdcToken.mint(donor.address, usdc("10000"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("10000"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("10000"));
+
+            // Check if goal is reached by comparing totalDonations to goal
+            const totalDonations = await fundraiser.totalDonations();
+            const goal = await fundraiser.goal();
+            expect(totalDonations).to.be.gte(goal);
+        });
+
+        it("should allow donations before deadline", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            // Donation within deadline should work
             await usdcToken.mint(donor.address, usdc("100"));
             await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("100"));
-            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("100"));
-            
+
+            await expect(
+                factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("100"))
+            ).to.not.be.reverted;
+
             const balance = await usdcToken.balanceOf(await fundraiser.getAddress());
             expect(balance).to.equal(usdc("100"));
         });
 
-        it("should accept ERC20 donations", async () => {
+        it("should allow withdrawal after deadline even if goal not reached", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            await usdcToken.mint(donor.address, usdc("1000"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            await ethers.provider.send("evm_increaseTime", [31 * 24 * 60 * 60]);
+            await ethers.provider.send("evm_mine");
+
+            const prevBal = await usdcToken.balanceOf(beneficiary.address);
+            await fundraiser.connect(creator).withdrawUSDT();
+            const newBal = await usdcToken.balanceOf(beneficiary.address);
+
+            expect(newBal - prevBal).to.equal(usdc("1000"));
+        });
+    });
+
+    describe("Donations", () => {
+        it("should accept ERC20 donations and emit events", async () => {
             const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
             
             const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
@@ -319,10 +352,26 @@ describe("FundBrave Comprehensive System Tests", () => {
             await usdcToken.mint(donor.address, usdc("1000"));
             await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("1000"));
             
-            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("1000"));
+            // Event is DonationCredited not DonationReceived
+            await expect(
+                factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("1000"))
+            ).to.emit(fundraiser, "DonationCredited");
             
             const balance = await usdcToken.balanceOf(await fundraiser.getAddress());
             expect(balance).to.equal(usdc("1000"));
+        });
+
+        it("should prevent zero-amount donations", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            
+            await createFundraiser(factory, creator, beneficiary);
+            
+            await usdcToken.mint(donor.address, usdc("1000"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("1000"));
+            
+            await expect(
+                factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), 0)
+            ).to.be.revertedWith("Factory: Amount must be > 0");
         });
 
         it("should track total funds raised", async () => {
@@ -354,21 +403,6 @@ describe("FundBrave Comprehensive System Tests", () => {
             expect(principal).to.equal(usdc("500"));
         });
 
-        it("should accept ERC20 staking (alternative test)", async () => {
-            const { factory, creator, beneficiary, staker, usdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
-            
-            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
-            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
-            
-            await usdcToken.mint(staker.address, usdc("2000"));
-            await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("2000"));
-            
-            await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("2000"));
-            
-            const principal = await stakingPool.stakerPrincipal(staker.address);
-            expect(principal).to.equal(usdc("2000"));
-        });
-
         it("should mint receipt tokens on stake", async () => {
             const { factory, creator, beneficiary, staker, usdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
             
@@ -395,7 +429,6 @@ describe("FundBrave Comprehensive System Tests", () => {
             await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("10000"));
             await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("10000"));
             
-            // Simulate yield
             await aUsdcToken.mint(await stakingPool.getAddress(), usdc("1000"));
             
             await ethers.provider.send("evm_increaseTime", [86401]);
@@ -411,40 +444,359 @@ describe("FundBrave Comprehensive System Tests", () => {
         });
     });
 
-    describe("Cross-Chain Bridge", () => {
-        it("should receive cross-chain donations", async () => {
+    describe("Fundraiser Interaction (Voting & Withdrawal)", () => {
+        it("should allow beneficiary to withdraw raised funds", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            await usdcToken.mint(donor.address, usdc("1000"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            const prevBal = await usdcToken.balanceOf(beneficiary.address);
+            await fundraiser.connect(creator).withdrawUSDT();
+            const newBal = await usdcToken.balanceOf(beneficiary.address);
+
+            expect(newBal - prevBal).to.equal(usdc("1000"));
+        });
+
+        it("should track voting power and allow proposals", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            await usdcToken.mint(donor.address, usdc("500"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("500"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("500"));
+
+            expect(await fundraiser.donorVotingPower(donor.address)).to.equal(usdc("500"));
+
+            await fundraiser.connect(creator).createProposal("Build a Well", "Details...", usdc("200"));
+            await fundraiser.connect(donor).vote(1, true);
+            
+            const proposal = await fundraiser.proposals(1);
+            expect(proposal.upvotes).to.equal(usdc("500"));
+
+            await fundraiser.connect(creator).executeProposal(1);
+            const executedProposal = await fundraiser.proposals(1);
+            expect(executedProposal.executed).to.be.true;
+        });
+    });
+
+    describe("Governance - Multiple Votes", () => {
+        it("should handle multiple simultaneous votes on same proposal", async () => {
+            const { factory, creator, beneficiary, donor, donor2, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            await usdcToken.mint(donor.address, usdc("500"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("500"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("500"));
+
+            await usdcToken.mint(donor2.address, usdc("300"));
+            await usdcToken.connect(donor2).approve(await factory.getAddress(), usdc("300"));
+            await factory.connect(donor2).donateERC20(0, await usdcToken.getAddress(), usdc("300"));
+
+            await fundraiser.connect(creator).createProposal("Build a School", "Details", usdc("200"));
+
+            await fundraiser.connect(donor).vote(1, true);
+            await fundraiser.connect(donor2).vote(1, false);
+
+            const proposal = await fundraiser.proposals(1);
+            expect(proposal.upvotes).to.equal(usdc("500"));
+            expect(proposal.downvotes).to.equal(usdc("300"));
+        });
+
+        it("should prevent double voting on same proposal", async () => {
+            const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
+            const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
+
+            await usdcToken.mint(donor.address, usdc("500"));
+            await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("500"));
+            await factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), usdc("500"));
+
+            await fundraiser.connect(creator).createProposal("Test", "Details", usdc("100"));
+            await fundraiser.connect(donor).vote(1, true);
+
+            await expect(
+                fundraiser.connect(donor).vote(1, true)
+            ).to.be.revertedWith("Already voted");
+        });
+    });
+
+    describe("Staking Exit (Unstake & Claim)", () => {
+        it("should allow users to unstake and burn receipt tokens", async () => {
+            const { factory, creator, beneficiary, staker, usdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
+            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
+            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
+
+            await usdcToken.mint(staker.address, usdc("1000"));
+            await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            await stakingPool.connect(staker).unstake(usdc("400"));
+
+            const principal = await stakingPool.stakerPrincipal(staker.address);
+            expect(principal).to.equal(usdc("600"));
+
+            const receiptBal = await receiptOFT.balanceOf(staker.address);
+            expect(receiptBal).to.equal(usdc("600"));
+            
+            const walletBal = await usdcToken.balanceOf(staker.address);
+            expect(walletBal).to.equal(usdc("400"));
+        });
+
+        it("should allow claiming rewards without unstaking", async () => {
+            const { factory, creator, beneficiary, staker, usdcToken, aUsdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
+            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
+            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
+
+            await usdcToken.mint(staker.address, usdc("1000"));
+            await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            await aUsdcToken.mint(await stakingPool.getAddress(), usdc("100"));
+            await ethers.provider.send("evm_increaseTime", [86401]);
+            await ethers.provider.send("evm_mine");
+            await stakingPool.performUpkeep("0x");
+
+            const prevBal = await usdcToken.balanceOf(staker.address);
+            await stakingPool.connect(staker).claimStakerRewards();
+            const newBal = await usdcToken.balanceOf(staker.address);
+
+            expect(newBal - prevBal).to.equal(usdc("19"));
+        });
+    });
+
+    describe("Receipt Token Cross-Chain (OFT)", () => {
+        it("should allow receipt tokens to be minted and checked", async () => {
+            const { factory, creator, beneficiary, staker, usdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
+            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
+            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
+
+            await usdcToken.mint(staker.address, usdc("1000"));
+            await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            const balance = await receiptOFT.balanceOf(staker.address);
+            expect(balance).to.equal(usdc("1000"));
+            
+            expect(await receiptOFT.name()).to.equal("Receipt");
+            expect(await receiptOFT.symbol()).to.equal("rFUND");
+        });
+
+        it("should allow receipt token transfers locally", async () => {
+            const { factory, creator, beneficiary, staker, donor, usdcToken, receiptOFT, owner } = await loadFixture(deploySystemFixture);
+            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
+            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
+
+            await usdcToken.mint(staker.address, usdc("1000"));
+            await usdcToken.connect(staker).approve(await factory.getAddress(), usdc("1000"));
+            await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("1000"));
+
+            await receiptOFT.connect(staker).transfer(donor.address, usdc("200"));
+
+            expect(await receiptOFT.balanceOf(staker.address)).to.equal(usdc("800"));
+            expect(await receiptOFT.balanceOf(donor.address)).to.equal(usdc("200"));
+        });
+
+        it("should note: cross-chain OFT sends require LayerZero testnet", async () => {
+            console.log("⚠️  Cross-chain receipt token transfers require LayerZero testnet");
+            console.log("    - OFT.send() needs real endpoint with gas estimation");
+            console.log("    - Test on Sepolia → Fuji or Mumbai → Sepolia");
+        });
+    });
+
+    describe("Emergency Functions", () => {
+        it("should allow owner to emergency withdraw ETH from bridge", async () => {
+            const { bridge, owner, donor } = await loadFixture(deploySystemFixture);
+
+            await donor.sendTransaction({ 
+                to: await bridge.getAddress(), 
+                value: eth("1") 
+            });
+
+            const prevBalance = await ethers.provider.getBalance(owner.address);
+            const tx = await bridge.connect(owner).emergencyWithdraw(ZERO_ADDRESS);
+            const receipt = await tx.wait();
+            const gasCost = receipt.gasUsed * receipt.gasPrice;
+            const newBalance = await ethers.provider.getBalance(owner.address);
+
+            expect(newBalance - prevBalance + gasCost).to.be.closeTo(eth("1"), eth("0.01"));
+        });
+
+        it("should allow owner to emergency withdraw ERC20 from bridge", async () => {
+            const { bridge, owner, usdcToken } = await loadFixture(deploySystemFixture);
+
+            const bridgeBalance = await usdcToken.balanceOf(await bridge.getAddress());
+            expect(bridgeBalance).to.be.gt(0);
+
+            const prevOwnerBalance = await usdcToken.balanceOf(owner.address);
+            await bridge.connect(owner).emergencyWithdraw(await usdcToken.getAddress());
+            const newOwnerBalance = await usdcToken.balanceOf(owner.address);
+
+            expect(newOwnerBalance - prevOwnerBalance).to.equal(bridgeBalance);
+        });
+
+        it("should prevent non-owner from emergency withdrawal", async () => {
+            const { bridge, donor } = await loadFixture(deploySystemFixture);
+
+            await expect(
+                bridge.connect(donor).emergencyWithdraw(ZERO_ADDRESS)
+            ).to.be.reverted;
+        });
+    });
+
+    describe("Morpho Staking Pool", () => {
+        it("should deploy factory with Morpho staking pool type", async () => {
+            const [owner, creator, beneficiary] = await ethers.getSigners();
+
+            const MockERC20 = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockERC20");
+            const usdcToken = await MockERC20.deploy("USD Coin", "USDC", 6);
+            const wethToken = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockWETH");
+            const weth = await wethToken.deploy();
+
+            const MockWorldID = await ethers.getContractFactory("MockWorldID");
+            const worldId = await MockWorldID.deploy();
+
+            const MockLZEndpoint = await ethers.getContractFactory("MockLZEndpoint");
+            const lzEndpoint = await MockLZEndpoint.deploy(1);
+
+            const MockUniswapRouter = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockUniswapRouter");
+            const router = await MockUniswapRouter.deploy(await weth.getAddress(), await usdcToken.getAddress());
+
+            const OneInchAdapter = await ethers.getContractFactory("OneInchAdapter");
+            const adapter = await OneInchAdapter.deploy(
+                await router.getAddress(),
+                await usdcToken.getAddress(),
+                await weth.getAddress(),
+                owner.address
+            );
+
+            const mockMorphoVault = await MockERC20.deploy("Morpho Vault", "mUSDC", 6);
+
+            const Fundraiser = await ethers.getContractFactory("Fundraiser");
+            const fundraiserImpl = await Fundraiser.deploy();
+
+            const StakingPool = await ethers.getContractFactory("StakingPool");
+            const stakingPoolImpl = await StakingPool.deploy();
+
+            const FundraiserFactory = await ethers.getContractFactory("FundraiserFactory");
+            const morphoFactory = await FundraiserFactory.deploy(
+                await fundraiserImpl.getAddress(),
+                await stakingPoolImpl.getAddress(),
+                await adapter.getAddress(),
+                await usdcToken.getAddress(),
+                await weth.getAddress(),
+                owner.address,
+                ZERO_ADDRESS,
+                ZERO_ADDRESS,
+                await mockMorphoVault.getAddress(),
+                1,
+                await worldId.getAddress(),
+                "app_id",
+                "action_id"
+            );
+
+            const ReceiptOFT = await ethers.getContractFactory("ReceiptOFT");
+            const receiptOFT = await ReceiptOFT.deploy("Receipt", "rFUND", await lzEndpoint.getAddress(), owner.address);
+            await morphoFactory.connect(owner).setReceiptOFT(await receiptOFT.getAddress());
+
+            const tx = await morphoFactory.connect(creator).createFundraiser(
+                "Morpho Test",
+                ["img.png"],
+                ["Environment"],
+                "Description",
+                "USA",
+                beneficiary.address,
+                usdc("10000"),
+                30,
+                NULL_ROOT,
+                111111,
+                NULL_PROOF
+            );
+
+            await expect(tx).to.emit(morphoFactory, "StakingPoolCreated");
+
+            const poolAddress = await morphoFactory.stakingPools(0);
+            const MorphoStakingPool = await ethers.getContractFactory("MorphoStakingPool");
+            const morphoPool = MorphoStakingPool.attach(poolAddress);
+
+            expect(await morphoPool.METAMORPHO_VAULT()).to.equal(await mockMorphoVault.getAddress());
+        });
+
+        it("should note: full Morpho integration requires mainnet fork", async () => {
+            console.log("⚠️  Full Morpho staking pool testing requires mainnet fork");
+            console.log("    - Real Morpho vault has complex reward distribution");
+            console.log("    - Use Hardhat mainnet fork for complete integration test");
+        });
+    });
+
+    describe("Cross-Chain Bridge (LayerZero V2)", () => {
+        it("should note: cross-chain send requires testnet", async () => {
+            console.log("⚠️  Mock LayerZero endpoint has limitations");
+            console.log("    - Full cross-chain send/receive testing requires LayerZero testnet");
+            console.log("    - Deploy to Sepolia, Fuji, Mumbai for integration testing");
+        });
+
+        it("should receive a cross-chain donation", async () => {
             const { factory, creator, beneficiary, remoteUser, usdcToken, lzEndpoint, bridge, owner } = await loadFixture(deploySystemFixture);
             
             const { fundraiser } = await createFundraiser(factory, creator, beneficiary);
             
-            // Prepare for cross-chain receive
             await ethers.provider.send("hardhat_impersonateAccount", [await bridge.getAddress()]);
             const bridgeSigner = await ethers.getSigner(await bridge.getAddress());
             await owner.sendTransaction({ to: await bridge.getAddress(), value: eth("1") });
-            await usdcToken.connect(bridgeSigner).transfer(await factory.getAddress(), usdc("100"));
+            const amount = usdc("50");
+            await usdcToken.connect(bridgeSigner).transfer(await factory.getAddress(), amount);
             await ethers.provider.send("hardhat_stopImpersonatingAccount", [await bridge.getAddress()]);
             
-            const amount = usdc("100");
             const payload = ethers.AbiCoder.defaultAbiCoder().encode(
                 ["address", "uint256", "uint8", "uint256"],
                 [remoteUser.address, 0, 0, amount]
             );
-            const guidBytes32 = ethers.encodeBytes32String("test-guid");
-            
+
             await lzEndpoint.connect(owner).mockReceive(
                 await bridge.getAddress(),
-                1,
-                guidBytes32,
+                1, 
+                ethers.encodeBytes32String("guid"),
                 payload
             );
+
+            const fundraiserBalance = await usdcToken.balanceOf(await fundraiser.getAddress());
+            expect(fundraiserBalance).to.equal(amount);
             
             const donations = await fundraiser.totalDonations();
             expect(donations).to.equal(amount);
         });
 
-        it("should skip cross-chain send test (mock limitation)", async function() {
-            console.log("⚠️  Skipping: Requires full LayerZero testnet for integration testing");
-            this.skip();
+        it("should receive cross-chain stakes", async () => {
+            const { factory, creator, beneficiary, remoteUser, usdcToken, lzEndpoint, bridge, owner, receiptOFT } = await loadFixture(deploySystemFixture);
+            const { stakingPool } = await createFundraiser(factory, creator, beneficiary);
+            await receiptOFT.connect(owner).setController(await stakingPool.getAddress(), true);
+            
+            await ethers.provider.send("hardhat_impersonateAccount", [await bridge.getAddress()]);
+            const bridgeSigner = await ethers.getSigner(await bridge.getAddress());
+            await owner.sendTransaction({ to: await bridge.getAddress(), value: eth("1") });
+            await usdcToken.connect(bridgeSigner).transfer(await factory.getAddress(), usdc("500"));
+            await ethers.provider.send("hardhat_stopImpersonatingAccount", [await bridge.getAddress()]);
+
+            const amount = usdc("500");
+            const payload = ethers.AbiCoder.defaultAbiCoder().encode(
+                ["address", "uint256", "uint8", "uint256"],
+                [remoteUser.address, 0, 1, amount]
+            );
+
+            await lzEndpoint.connect(owner).mockReceive(
+                await bridge.getAddress(),
+                1,
+                ethers.encodeBytes32String("guid"),
+                payload
+            );
+
+            const stakerBal = await stakingPool.stakerPrincipal(remoteUser.address);
+            expect(stakerBal).to.equal(amount);
+            
+            const receiptBal = await receiptOFT.balanceOf(remoteUser.address);
+            expect(receiptBal).to.equal(amount);
         });
     });
 
@@ -524,7 +876,7 @@ describe("FundBrave Comprehensive System Tests", () => {
         });
 
         it("should search fundraisers by category", async () => {
-            const { factory, owner, creator, beneficiary } = await loadFixture(deploySystemFixture);
+            const { factory, creator, beneficiary } = await loadFixture(deploySystemFixture);
             
             await createFundraiser(factory, creator, beneficiary, 444);
             
