@@ -105,7 +105,7 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
         updateReward(staker)
     {
         require(usdtAmount > 0, "Amount must be > 0");
-        USDT.safeTransferFrom(factoryAddress, address(this), usdtAmount);
+        //USDT.safeTransferFrom(factoryAddress, address(this), usdtAmount);
         
         METAMORPHO_VAULT.deposit(usdtAmount, address(this));
 

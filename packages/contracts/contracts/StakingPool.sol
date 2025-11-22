@@ -197,7 +197,7 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     {
         require(usdcAmount > 0, "Amount must be > 0");
         
-        USDC.safeTransferFrom(factoryAddress, address(this), usdcAmount);
+        //USDC.safeTransferFrom(factoryAddress, address(this), usdcAmount);
         AAVE_POOL.supply(address(USDC), usdcAmount, address(this), 0);
         
         stakerPrincipal[staker] += usdcAmount;

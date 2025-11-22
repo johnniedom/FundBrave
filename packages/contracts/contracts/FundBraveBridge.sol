@@ -133,7 +133,7 @@ contract FundBraveBridge is OApp, ReentrancyGuard {
         uint256 balance = usdcToken.balanceOf(address(this));
         require(balance >= amount, "Bridge Insufficient Liquidity");
 
-        usdcToken.forceApprove(localFundraiserFactory, amount);
+        usdcToken.safeTransfer(localFundraiserFactory, amount);
 
         bool success;
         if (action == 0) {
