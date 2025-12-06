@@ -1,4 +1,3 @@
- 
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,83 +10,85 @@ datasource db {
 // ==================== USER & AUTHENTICATION ====================
 
 model User {
-  id                  String    @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // Identity (Web3 Primary, Web2 Optional)
-  walletAddress       String    @unique
-  username            String?   @unique
-  
+  walletAddress String  @unique
+  username      String? @unique
+
   // Web2 Auth (Optional for hybrid users)
-  email               String?   @unique
-  emailVerified       Boolean   @default(false)
-  passwordHash        String?
-  googleId            String?
-  twitterId           String?
-  
+  email         String? @unique
+  emailVerified Boolean @default(false)
+  passwordHash  String?
+  googleId      String?
+  twitterId     String?
+
   // Managed Wallet (Encrypted for Web2 users)
   encryptedPrivateKey String?
   encryptionIv        String?
-  
+
   // Profile
-  displayName         String?
-  bio                 String?   @db.Text
-  avatarUrl           String?
-  bannerUrl           String?
-  location            String?
-  website             String?
-  
+  displayName String?
+  bio         String? @db.Text
+  avatarUrl   String?
+  bannerUrl   String?
+  location    String?
+  website     String?
+
   // Verification & Reputation
-  worldIdVerified     Boolean   @default(false)
-  worldIdNullifier    String?   @unique
-  isVerifiedCreator   Boolean   @default(false)
-  verificationBadge   VerificationBadge?
-  reputationScore     Int       @default(0)
-  
+  worldIdVerified   Boolean            @default(false)
+  worldIdNullifier  String?            @unique
+  isVerifiedCreator Boolean            @default(false)
+  verificationBadge VerificationBadge?
+  reputationScore   Int                @default(0)
+
   // Social Stats (Denormalized for performance)
-  followersCount      Int       @default(0)
-  followingCount      Int       @default(0)
-  postsCount          Int       @default(0)
-  fundraisersCount    Int       @default(0)
-  totalDonated        String    @default("0")
-  totalStaked         String    @default("0")
-  
+  followersCount   Int    @default(0)
+  followingCount   Int    @default(0)
+  postsCount       Int    @default(0)
+  fundraisersCount Int    @default(0)
+  totalDonated     String @default("0")
+  totalStaked      String @default("0")
+
   // Privacy
-  isPrivate           Boolean   @default(false)
-  isActive            Boolean   @default(true)
-  isSuspended         Boolean   @default(false)
-  suspensionReason    String?
-  
+  isPrivate        Boolean @default(false)
+  isActive         Boolean @default(true)
+  isSuspended      Boolean @default(false)
+  suspensionReason String?
+
   // Timestamps
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-  lastSeenAt          DateTime?
-  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime?
+
   // Relations
   posts               Post[]
   comments            Comment[]
   likes               Like[]
   bookmarks           Bookmark[]
   reposts             Repost[]
-  followedBy          Follow[]  @relation("following")
-  following           Follow[]  @relation("follower")
-  blockedBy           Block[]   @relation("blocking")
-  blocking            Block[]   @relation("blocked")
+  followedBy          Follow[]                  @relation("following")
+  following           Follow[]                  @relation("follower")
+  blockedBy           Block[]                   @relation("blocking")
+  blocking            Block[]                   @relation("blocked")
   fundraisers         Fundraiser[]
   donations           Donation[]
   stakes              Stake[]
   votes               Vote[]
   proposals           Proposal[]
-  notifications       Notification[] @relation("recipient")
-  triggeredNotifs     Notification[] @relation("actor")
-  sentMessages        Message[] @relation("sender")
-  receivedMessages    Message[] @relation("receiver")
+  notifications       Notification[]            @relation("recipient")
+  triggeredNotifs     Notification[]            @relation("actor")
+  sentMessages        Message[]                 @relation("sender")
+  receivedMessages    Message[]                 @relation("receiver")
   conversations       ConversationParticipant[]
   sessions            Session[]
   activities          ActivityLog[]
-  reports             Report[]  @relation("reporter")
-  reportedContent     Report[]  @relation("reported")
-  nonce               String?  @default(uuid())
-  
+  reports             Report[]                  @relation("reporter")
+  reportedContent     Report[]                  @relation("reported")
+  notificationSetting NotificationSetting?
+  deviceTokens        DeviceToken[]
+  nonce               String?                   @default(uuid())
+
   @@index([walletAddress])
   @@index([username])
   @@index([email])
@@ -113,7 +114,7 @@ model Session {
   userAgent    String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
-  
+
   @@index([userId])
   @@index([token])
   @@map("sessions")
@@ -128,7 +129,7 @@ model Follow {
   follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
   following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
-  
+
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
@@ -136,14 +137,14 @@ model Follow {
 }
 
 model Block {
-  id          String   @id @default(uuid())
-  blockerId   String
-  blockedId   String
-  blocker     User     @relation("blocking", fields: [blockerId], references: [id], onDelete: Cascade)
-  blocked     User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
-  reason      String?
-  createdAt   DateTime @default(now())
-  
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  blocker   User     @relation("blocking", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])
@@ -153,56 +154,56 @@ model Block {
 // ==================== POSTS & CONTENT ====================
 
 model Post {
-  id              String    @id @default(uuid())
-  content         String?   @db.Text
-  type            PostType  @default(TEXT)
-  
+  id      String   @id @default(uuid())
+  content String?  @db.Text
+  type    PostType @default(TEXT)
+
   // Author
-  authorId        String
-  author          User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
   // Media
-  mediaUrls       String[]
-  media           Media[]
-  
+  mediaUrls String[]
+  media     Media[]
+
   // Hashtags & Mentions
-  tags            PostHashtag[]
-  mentions        String[]
-  
+  tags     PostHashtag[]
+  mentions String[]
+
   // Fundraiser link
-  fundraiserId    String?
-  fundraiser      Fundraiser? @relation(fields: [fundraiserId], references: [id])
-  
+  fundraiserId String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
+
   // Thread/Reply
-  parentId        String?
-  parent          Post?     @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies         Post[]    @relation("PostReplies")
-  replyCount      Int       @default(0)
-  
+  parentId   String?
+  parent     Post?   @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Post[]  @relation("PostReplies")
+  replyCount Int     @default(0)
+
   // Engagement (Denormalized)
-  likesCount      Int       @default(0)
-  repostsCount    Int       @default(0)
-  bookmarksCount  Int       @default(0)
-  viewsCount      Int       @default(0)
-  engagementScore Float     @default(0) // Calculated for feed algorithm
-  
+  likesCount      Int   @default(0)
+  repostsCount    Int   @default(0)
+  bookmarksCount  Int   @default(0)
+  viewsCount      Int   @default(0)
+  engagementScore Float @default(0) // Calculated for feed algorithm
+
   // Visibility
-  visibility      PostVisibility @default(PUBLIC)
-  isPinned        Boolean   @default(false)
-  isEdited        Boolean   @default(false)
-  editHistory     Json?
-  
+  visibility  PostVisibility @default(PUBLIC)
+  isPinned    Boolean        @default(false)
+  isEdited    Boolean        @default(false)
+  editHistory Json?
+
   // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  likes           Like[]
-  reposts         Repost[]
-  bookmarks       Bookmark[]
-  comments        Comment[]
-  reports         Report[]
-  
+  likes     Like[]
+  reposts   Repost[]
+  bookmarks Bookmark[]
+  comments  Comment[]
+  reports   Report[]
+
   @@index([authorId])
   @@index([fundraiserId])
   @@index([parentId])
@@ -212,14 +213,14 @@ model Post {
 }
 
 model Hashtag {
-  id          String   @id @default(uuid())
-  tag         String   @unique
-  
-  posts       PostHashtag[]
-  
-  usageCount  Int      @default(0)
-  lastUsedAt  DateTime @default(now())
-  
+  id  String @id @default(uuid())
+  tag String @unique
+
+  posts PostHashtag[]
+
+  usageCount Int      @default(0)
+  lastUsedAt DateTime @default(now())
+
   @@index([usageCount])
   @@map("hashtags")
 }
@@ -227,10 +228,10 @@ model Hashtag {
 // Join table for efficiency
 model PostHashtag {
   postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   hashtagId String
-  hashtag   Hashtag  @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
-  
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
   @@id([postId, hashtagId])
@@ -255,21 +256,21 @@ enum PostVisibility {
 }
 
 model Media {
-  id          String     @id @default(uuid())
-  postId      String
-  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
-  url         String
-  type        MediaType
-  mimeType    String?
-  size        Int?       // bytes
-  width       Int?
-  height      Int?
-  duration    Int?       // seconds for video/audio
-  thumbnail   String?
-  alt         String?
-  status      MediaStatus @default(PROCESSING)
-  createdAt   DateTime   @default(now())
-  
+  id        String      @id @default(uuid())
+  postId    String
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  type      MediaType
+  mimeType  String?
+  size      Int? // bytes
+  width     Int?
+  height    Int?
+  duration  Int? // seconds for video/audio
+  thumbnail String?
+  alt       String?
+  status    MediaStatus @default(PROCESSING)
+  createdAt DateTime    @default(now())
+
   @@index([postId])
   @@map("media")
 }
@@ -288,24 +289,24 @@ enum MediaStatus {
 }
 
 model Comment {
-  id           String   @id @default(uuid())
-  content      String   @db.Text
-  authorId     String
-  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  postId       String
-  post         Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  
+  id       String @id @default(uuid())
+  content  String @db.Text
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId   String
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
   // Nested comments
-  parentId     String?
-  parent       Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies      Comment[] @relation("CommentReplies")
-  
-  likesCount   Int      @default(0)
-  likes        CommentLike[]
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  likesCount Int           @default(0)
+  likes      CommentLike[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([postId])
   @@index([authorId])
   @@index([parentId])
@@ -318,7 +319,7 @@ model CommentLike {
   commentId String
   comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, commentId])
   @@index([commentId])
   @@map("comment_likes")
@@ -331,7 +332,7 @@ model Like {
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, postId])
   @@index([postId])
   @@index([userId])
@@ -346,7 +347,7 @@ model Repost {
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment   String?  @db.Text // Optional quote repost
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, postId])
   @@index([postId])
   @@index([userId])
@@ -360,7 +361,7 @@ model Bookmark {
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  
+
   @@unique([userId, postId])
   @@index([userId])
   @@map("bookmarks")
@@ -369,54 +370,54 @@ model Bookmark {
 // ==================== FUNDRAISING ====================
 
 model Fundraiser {
-  id              String    @id @default(uuid())
-  onChainId       Int       @unique
-  txHash          String    @unique
-  
+  id        String @id @default(uuid())
+  onChainId Int    @unique
+  txHash    String @unique
+
   // Basic Info
-  name            String
-  description     String    @db.Text
-  images          String[]
-  categories      String[]
-  region          String?
-  
+  name        String
+  description String   @db.Text
+  images      String[]
+  categories  String[]
+  region      String?
+
   // Financials
-  goalAmount      String    // BigDecimal as string (USDC)
-  raisedAmount    String    @default("0")
-  currency        String    @default("USDC")
-  
+  goalAmount   String // BigDecimal as string (USDC)
+  raisedAmount String @default("0")
+  currency     String @default("USDC")
+
   // Addresses
   beneficiary     String
   stakingPoolAddr String?
-  
+
   // Creator
-  creatorId       String
-  creator         User      @relation(fields: [creatorId], references: [id])
-  
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
   // Timeline
-  deadline        DateTime
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  deadline  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Status
-  isActive        Boolean   @default(true)
-  isFeatured      Boolean   @default(false)
-  goalReached     Boolean   @default(false)
-  
+  isActive    Boolean @default(true)
+  isFeatured  Boolean @default(false)
+  goalReached Boolean @default(false)
+
   // Stats (Denormalized)
-  donorsCount     Int       @default(0)
-  stakersCount    Int       @default(0)
-  updatesCount    Int       @default(0)
-  
+  donorsCount  Int @default(0)
+  stakersCount Int @default(0)
+  updatesCount Int @default(0)
+
   // Relations
-  donations       Donation[]
-  stakes          Stake[]
-  posts           Post[]
-  updates         FundraiserUpdate[]
-  milestones      Milestone[]
-  proposals       Proposal[]
-  votes           Vote[]
-  
+  donations  Donation[]
+  stakes     Stake[]
+  posts      Post[]
+  updates    FundraiserUpdate[]
+  milestones Milestone[]
+  proposals  Proposal[]
+  votes      Vote[]
+
   @@index([creatorId])
   @@index([onChainId])
   @@index([isActive])
@@ -425,64 +426,64 @@ model Fundraiser {
 }
 
 model FundraiserUpdate {
-  id            String     @id @default(uuid())
-  fundraiserId  String
-  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
-  title         String
-  content       String     @db.Text
-  mediaUrls     String[]
-  createdAt     DateTime   @default(now())
-  
+  id           String     @id @default(uuid())
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  title        String
+  content      String     @db.Text
+  mediaUrls    String[]
+  createdAt    DateTime   @default(now())
+
   @@index([fundraiserId])
   @@map("fundraiser_updates")
 }
 
 model Milestone {
-  id            String     @id @default(uuid())
-  fundraiserId  String
-  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
-  title         String
-  description   String?
-  targetAmount  String
-  isReached     Boolean    @default(false)
-  reachedAt     DateTime?
-  createdAt     DateTime   @default(now())
-  
+  id           String     @id @default(uuid())
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  targetAmount String
+  isReached    Boolean    @default(false)
+  reachedAt    DateTime?
+  createdAt    DateTime   @default(now())
+
   @@index([fundraiserId])
   @@map("milestones")
 }
 
 model Donation {
-  id            String     @id @default(uuid())
-  txHash        String     @unique
-  
+  id     String @id @default(uuid())
+  txHash String @unique
+
   // Amounts
-  amount        String     // Original amount
-  amountUSD     String     // Converted to USD
-  token         String     // Token symbol
-  
+  amount    String // Original amount
+  amountUSD String // Converted to USD
+  token     String // Token symbol
+
   // Blockchain
-  chainId       Int
-  sourceChain   String
-  blockNumber   Int?
-  
+  chainId     Int
+  sourceChain String
+  blockNumber Int?
+
   // Donor
-  donorId       String?
-  donor         User?      @relation(fields: [donorId], references: [id])
-  donorAddress  String
-  
+  donorId      String?
+  donor        User?   @relation(fields: [donorId], references: [id])
+  donorAddress String
+
   // Fundraiser
-  fundraiserId  String
-  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id])
-  
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
   // Metadata
-  isAnonymous   Boolean    @default(false)
-  message       String?
-  
+  isAnonymous Boolean @default(false)
+  message     String?
+
   // Timestamps
-  createdAt     DateTime   @default(now())
-  indexedAt     DateTime   @default(now())
-  
+  createdAt DateTime @default(now())
+  indexedAt DateTime @default(now())
+
   @@index([fundraiserId])
   @@index([donorId])
   @@index([donorAddress])
@@ -491,80 +492,85 @@ model Donation {
 }
 
 model Stake {
-  id            String   @id @default(uuid())
-  txHash        String   @unique
-  poolAddress   String
-  amount        String
-  shares        String   // Receipt tokens
-  
+  id          String @id @default(uuid())
+  txHash      String @unique
+  poolAddress String
+  amount      String
+  shares      String // Receipt tokens
+
+  // Fundraiser relation
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
   // Staker
   stakerId      String
-  staker        User     @relation(fields: [stakerId], references: [id])
+  staker        User   @relation(fields: [stakerId], references: [id])
   stakerAddress String
-  
+
   // Blockchain
-  chainId       Int
-  blockNumber   Int?
-  
+  chainId     Int
+  blockNumber Int?
+
   // Status
-  isActive      Boolean  @default(true)
-  
+  isActive Boolean @default(true)
+
   // Timestamps
-  stakedAt      DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  unstakedAt    DateTime?
-  
+  stakedAt   DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  unstakedAt DateTime?
+
   @@index([stakerId])
+  @@index([fundraiserId])
   @@index([poolAddress])
   @@map("stakes")
 }
 
 model Proposal {
-  id            String     @id @default(uuid())
-  onChainId     Int        @unique
-  fundraiserId  String
-  fundraiser    Fundraiser @relation(fields: [fundraiserId], references: [id])
-  
+  id           String     @id @default(uuid())
+  onChainId    Int        @unique
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
   // Content
-  title         String
-  description   String     @db.Text
-  
+  title       String
+  description String @db.Text
+
   // Creator
-  creatorId     String
-  creator       User       @relation(fields: [creatorId], references: [id])
-  
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
   // Voting
-  requiredVotes String     // BigDecimal as string
-  upvotes       String     @default("0")
-  downvotes     String     @default("0")
-  
+  requiredVotes String // BigDecimal as string
+  upvotes       String @default("0")
+  downvotes     String @default("0")
+
   // Status
-  executed      Boolean    @default(false)
-  executedAt    DateTime?
-  
+  executed   Boolean   @default(false)
+  executedAt DateTime?
+
   // Timestamps
-  createdAt     DateTime   @default(now())
-  
+  createdAt DateTime @default(now())
+
   // Relations
-  votes         Vote[]
-  
+  votes Vote[]
+
   @@index([fundraiserId])
   @@index([onChainId])
   @@map("proposals")
 }
 
 model Vote {
-  id          String     @id @default(uuid())
-  proposalId  String
-  proposal    Proposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  id           String     @id @default(uuid())
+  proposalId   String
+  proposal     Proposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   fundraiserId String
-  fundraiser  Fundraiser @relation(fields: [fundraiserId], references: [id])
-  voterId     String
-  voter       User       @relation(fields: [voterId], references: [id])
-  isUpvote    Boolean
-  votingPower String     // Amount of USDC donated
-  createdAt   DateTime   @default(now())
-  
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+  voterId      String
+  voter        User       @relation(fields: [voterId], references: [id])
+  isUpvote     Boolean
+  votingPower  String // Amount of USDC donated
+  createdAt    DateTime   @default(now())
+
   @@unique([proposalId, voterId])
   @@index([proposalId])
   @@map("votes")
@@ -573,35 +579,35 @@ model Vote {
 // ==================== NOTIFICATIONS ====================
 
 model Notification {
-  id          String            @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // Recipient
   recipientId String
-  recipient   User              @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  
+  recipient   User   @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
   // Actor (who triggered the notification)
-  actorId     String?
-  actor       User?             @relation("actor", fields: [actorId], references: [id], onDelete: SetNull)
-  
+  actorId String?
+  actor   User?   @relation("actor", fields: [actorId], references: [id], onDelete: SetNull)
+
   // Type & Content
-  type        NotificationType
-  title       String?
-  message     String?
-  
+  type    NotificationType
+  title   String?
+  message String?
+
   // Related entities
-  entityId    String?           // Post, Fundraiser, etc.
-  entityType  String?           // 'post', 'fundraiser', 'donation'
-  
+  entityId   String? // Post, Fundraiser, etc.
+  entityType String? // 'post', 'fundraiser', 'donation'
+
   // Metadata
-  metadata    Json?
-  
+  metadata Json?
+
   // Status
-  read        Boolean           @default(false)
-  readAt      DateTime?
-  
+  read   Boolean   @default(false)
+  readAt DateTime?
+
   // Timestamps
-  createdAt   DateTime          @default(now())
-  
+  createdAt DateTime @default(now())
+
   @@index([recipientId])
   @@index([actorId])
   @@index([read])
@@ -634,7 +640,7 @@ model Conversation {
   lastMessageAt DateTime?
   createdAt     DateTime                  @default(now())
   updatedAt     DateTime                  @updatedAt
-  
+
   @@map("conversations")
 }
 
@@ -646,7 +652,7 @@ model ConversationParticipant {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   joinedAt       DateTime     @default(now())
   lastReadAt     DateTime?
-  
+
   @@unique([conversationId, userId])
   @@index([userId])
   @@map("conversation_participants")
@@ -665,7 +671,7 @@ model Message {
   read           Boolean      @default(false)
   readAt         DateTime?
   createdAt      DateTime     @default(now())
-  
+
   @@index([conversationId])
   @@index([senderId])
   @@index([receiverId])
@@ -675,22 +681,25 @@ model Message {
 // ==================== MODERATION & SAFETY ====================
 
 model Report {
-  id           String       @id @default(uuid())
-  reporterId   String
-  reporter     User         @relation("reporter", fields: [reporterId], references: [id])
-  reportedId   String
-  reported     User         @relation("reported", fields: [reportedId], references: [id])
-  entityId     String?      // Post, Comment, etc.
-  entityType   String?
-  reason       ReportReason
-  description  String?      @db.Text
-  status       ReportStatus @default(PENDING)
-  resolvedAt   DateTime?
-  resolvedBy   String?
-  createdAt    DateTime     @default(now())
-  
+  id          String       @id @default(uuid())
+  reporterId  String
+  reporter    User         @relation("reporter", fields: [reporterId], references: [id])
+  reportedId  String
+  reported    User         @relation("reported", fields: [reportedId], references: [id])
+  postId      String?
+  post        Post?        @relation(fields: [postId], references: [id])
+  entityId    String? // Post, Comment, etc.
+  entityType  String?
+  reason      ReportReason
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime     @default(now())
+
   @@index([reporterId])
   @@index([reportedId])
+  @@index([postId])
   @@index([status])
   @@map("reports")
 }
@@ -716,17 +725,17 @@ enum ReportStatus {
 // ==================== ANALYTICS & TRACKING ====================
 
 model ActivityLog {
-  id        String       @id @default(uuid())
-  userId    String?
-  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action    ActivityType
-  entityId  String?
+  id         String       @id @default(uuid())
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     ActivityType
+  entityId   String?
   entityType String?
-  metadata  Json?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime     @default(now())
-  
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime     @default(now())
+
   @@index([userId])
   @@index([action])
   @@index([createdAt])
@@ -753,14 +762,14 @@ enum ActivityType {
 }
 
 model Trending {
-  id          String   @id @default(uuid())
-  type        String   // 'hashtag', 'fundraiser', 'user'
-  value       String   // The actual hashtag, fundraiser ID, or user ID
-  score       Float    // Trending score
-  postsCount  Int      @default(0)
-  period      String   // '1h', '24h', '7d'
+  id           String   @id @default(uuid())
+  type         String // 'hashtag', 'fundraiser', 'user'
+  value        String // The actual hashtag, fundraiser ID, or user ID
+  score        Float // Trending score
+  postsCount   Int      @default(0)
+  period       String // '1h', '24h', '7d'
   calculatedAt DateTime @default(now())
-  
+
   @@unique([type, value, period])
   @@index([type, period, score])
   @@map("trending")
@@ -769,81 +778,82 @@ model Trending {
 // ==================== BLOCKCHAIN SYNC ====================
 
 model BlockchainSync {
-  id          String   @id @default(uuid())
-  chainId     Int
-  chainName   String
+  id              String   @id @default(uuid())
+  chainId         Int
+  chainName       String
   contractAddress String
-  lastBlock   Int      @default(0)
-  lastSyncAt  DateTime @default(now())
-  status      String   @default("SYNCING") // 'SYNCING', 'SYNCED', 'ERROR'
-  error       String?
-  
+  lastBlock       Int      @default(0)
+  lastSyncAt      DateTime @default(now())
+  status          String   @default("SYNCING") // 'SYNCING', 'SYNCED', 'ERROR'
+  error           String?
+
   @@unique([chainId, contractAddress])
   @@map("blockchain_sync")
 }
 
 model NotificationSetting {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Channels
   emailEnabled Boolean @default(true)
   pushEnabled  Boolean @default(true)
-  
+
   // Granular Controls
-  notifyOnLike      Boolean @default(true)
-  notifyOnComment   Boolean @default(true)
-  notifyOnFollow    Boolean @default(true)
-  notifyOnMention   Boolean @default(true)
-  notifyOnDonation  Boolean @default(true) // "Someone donated to your fundraiser"
-  notifyOnStake     Boolean @default(true)
-  
+  notifyOnLike     Boolean @default(true)
+  notifyOnComment  Boolean @default(true)
+  notifyOnFollow   Boolean @default(true)
+  notifyOnMention  Boolean @default(true)
+  notifyOnDonation Boolean @default(true) // "Someone donated to your fundraiser"
+  notifyOnStake    Boolean @default(true)
+
   updatedAt DateTime @updatedAt
+
   @@map("notification_settings")
 }
 
 model DeviceToken {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  token     String   @unique // The Firebase/APNS token
-  platform  String   // 'IOS', 'ANDROID', 'WEB'
-  
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token    String @unique // The Firebase/APNS token
+  platform String // 'IOS', 'ANDROID', 'WEB'
+
   lastUsedAt DateTime @default(now())
   createdAt  DateTime @default(now())
-  
+
   @@index([userId])
   @@map("device_tokens")
 }
 
 model SupportedChain {
-  id          Int      @id // Use Chain ID (e.g., 1, 137, 10)
-  name        String   // "Ethereum Mainnet"
+  id          Int    @id // Use Chain ID (e.g., 1, 137, 10)
+  name        String // "Ethereum Mainnet"
   rpcUrl      String
   explorerUrl String
-  
-  isActive    Boolean  @default(true)
-  tokens      SupportedToken[]
-  
+
+  isActive Boolean          @default(true)
+  tokens   SupportedToken[]
+
   @@map("supported_chains")
 }
 
 model SupportedToken {
-  id        String   @id @default(uuid())
-  symbol    String   // "USDC"
-  name      String   // "USD Coin"
-  decimals  Int      @default(18)
-  
-  chainId   Int
-  chain     SupportedChain @relation(fields: [chainId], references: [id])
-  
-  address   String   // The contract address on this specific chain
-  logoUrl   String?
-  
-  isActive  Boolean  @default(true)
-  
+  id       String @id @default(uuid())
+  symbol   String // "USDC"
+  name     String // "USD Coin"
+  decimals Int    @default(18)
+
+  chainId Int
+  chain   SupportedChain @relation(fields: [chainId], references: [id])
+
+  address String // The contract address on this specific chain
+  logoUrl String?
+
+  isActive Boolean @default(true)
+
   @@unique([chainId, address])
   @@unique([chainId, symbol])
   @@map("supported_tokens")
