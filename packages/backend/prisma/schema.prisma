@@ -62,32 +62,38 @@ model User {
   lastSeenAt DateTime?
 
   // Relations
-  posts               Post[]
-  comments            Comment[]
-  likes               Like[]
-  bookmarks           Bookmark[]
-  reposts             Repost[]
-  followedBy          Follow[]                  @relation("following")
-  following           Follow[]                  @relation("follower")
-  blockedBy           Block[]                   @relation("blocking")
-  blocking            Block[]                   @relation("blocked")
-  fundraisers         Fundraiser[]
-  donations           Donation[]
-  stakes              Stake[]
-  votes               Vote[]
-  proposals           Proposal[]
-  notifications       Notification[]            @relation("recipient")
-  triggeredNotifs     Notification[]            @relation("actor")
-  sentMessages        Message[]                 @relation("sender")
-  receivedMessages    Message[]                 @relation("receiver")
-  conversations       ConversationParticipant[]
-  sessions            Session[]
-  activities          ActivityLog[]
-  reports             Report[]                  @relation("reporter")
-  reportedContent     Report[]                  @relation("reported")
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  bookmarks        Bookmark[]
+  reposts          Repost[]
+  followedBy       Follow[]                  @relation("following")
+  following        Follow[]                  @relation("follower")
+  blockedBy        Block[]                   @relation("blocking")
+  blocking         Block[]                   @relation("blocked")
+  fundraisers      Fundraiser[]
+  donations        Donation[]
+  stakes           Stake[]
+  votes            Vote[]
+  proposals        Proposal[]
+  notifications    Notification[]            @relation("recipient")
+  triggeredNotifs  Notification[]            @relation("actor")
+  sentMessages     Message[]                 @relation("sender")
+  receivedMessages Message[]                 @relation("receiver")
+  conversations    ConversationParticipant[]
+  sessions         Session[]
+  activities       ActivityLog[]
+  reports          Report[]                  @relation("reporter")
+  reportedContent  Report[]                  @relation("reported")
+
+  // New Global Pool Relations
+  globalVotes GlobalPoolVote[]
+  fbtClaims   RewardClaim[]
+  fbtLocks    GlobalPoolLock[]
+
   notificationSetting NotificationSetting?
   deviceTokens        DeviceToken[]
-  nonce               String?                   @default(uuid())
+  nonce               String?              @default(uuid())
 
   @@index([walletAddress])
   @@index([username])
@@ -418,6 +424,8 @@ model Fundraiser {
   proposals  Proposal[]
   votes      Vote[]
 
+  globalVotes GlobalPoolVote[]
+
   @@index([creatorId])
   @@index([onChainId])
   @@index([isActive])
@@ -498,9 +506,8 @@ model Stake {
   amount      String
   shares      String // Receipt tokens
 
-  // Fundraiser relation
-  fundraiserId String
-  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+  fundraiserId String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
 
   // Staker
   stakerId      String
@@ -513,6 +520,7 @@ model Stake {
 
   // Status
   isActive Boolean @default(true)
+  isGlobal Boolean @default(false)
 
   // Timestamps
   stakedAt   DateTime  @default(now())
@@ -829,8 +837,8 @@ model DeviceToken {
 }
 
 model SupportedChain {
-  id          Int    @id // Use Chain ID (e.g., 1, 137, 10)
-  name        String // "Ethereum Mainnet"
+  id          Int    @id
+  name        String
   rpcUrl      String
   explorerUrl String
 
@@ -842,14 +850,14 @@ model SupportedChain {
 
 model SupportedToken {
   id       String @id @default(uuid())
-  symbol   String // "USDC"
-  name     String // "USD Coin"
+  symbol   String
+  name     String
   decimals Int    @default(18)
 
   chainId Int
   chain   SupportedChain @relation(fields: [chainId], references: [id])
 
-  address String // The contract address on this specific chain
+  address String
   logoUrl String?
 
   isActive Boolean @default(true)
@@ -857,4 +865,78 @@ model SupportedToken {
   @@unique([chainId, address])
   @@unique([chainId, symbol])
   @@map("supported_tokens")
+}
+
+// ==================== GLOBAL POOL & VOTING ====================
+
+model GlobalPoolEpoch {
+  id          String   @id @default(uuid())
+  epochNumber Int      @unique
+  startDate   DateTime
+  endDate     DateTime
+  totalYield  String   @default("0")
+
+  isCalculated  Boolean @default(false)
+  isDistributed Boolean @default(false)
+
+  distributionTx String?
+
+  votes GlobalPoolVote[]
+
+  @@map("global_pool_epochs")
+}
+
+model GlobalPoolVote {
+  id String @id @default(uuid())
+
+  epochId String
+  epoch   GlobalPoolEpoch @relation(fields: [epochId], references: [id])
+
+  voterId String
+  voter   User   @relation(fields: [voterId], references: [id])
+
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
+  weight String
+
+  createdAt DateTime @default(now())
+
+  @@unique([epochId, voterId, fundraiserId])
+  @@index([epochId])
+  @@map("global_pool_votes")
+}
+
+// ==================== HYBRID FBT TOKENOMICS ====================
+
+model GlobalPoolLock {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  amount      String
+  unlockDate  DateTime
+  multiplier  Float
+  votingPower String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("global_pool_locks")
+}
+
+model RewardClaim {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  amount String
+  txHash String @unique
+
+  claimedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("reward_claims")
 }
