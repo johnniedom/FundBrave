@@ -20,6 +20,7 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
     // This is the ERC4626 MetaMorpho Vault
     IMetaMorpho public immutable METAMORPHO_VAULT;
     IERC20 public immutable USDT;
+    IERC20 public immutable FBT;
 
     // --- Beneficiaries ---
     address public immutable beneficiary;
@@ -40,10 +41,23 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
     uint256 public constant PLATFORM_SHARE = 200;
     uint256 public constant TOTAL_BASIS = 10000;
 
+    uint256 public usdtRewardPerTokenStored;
+    mapping(address => uint256) public userUsdtRewardPerTokenPaid;
+    mapping(address => uint256) public usdtRewards;
+
+    // --- 2. FBT Liquidity Mining State (New) ---
+    uint256 public periodFinish;
+    uint256 public rewardRate;
+    uint256 public rewardsDuration;
+    uint256 public lastUpdateTime;
+
+    // --- Events ---
     event Staked(address indexed staker, uint256 usdtAmount);
     event Unstaked(address indexed staker, uint256 usdtAmount);
     event YieldHarvested(uint256 totalYield, uint256 stakerShare);
-    event RewardsClaimed(address indexed staker, uint256 amount);
+    event UsdtRewardsClaimed(address indexed staker, uint256 amount);
+    event FbtRewardsClaimed(address indexed staker, uint256 amount);
+    event RewardAdded(uint256 reward);
 
     modifier onlyFactory() {
         require(msg.sender == factoryAddress, "StakingPool: Only factory");
@@ -51,14 +65,22 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
     }
 
     modifier updateReward(address staker) {
-        rewards[staker] += earned(staker);
-        userRewardPerTokenPaid[staker] = rewardPerTokenStored;
+        rewardPerTokenStored = rewardPerToken();
+        lastUpdateTime = lastTimeRewardApplicable();
+        if (staker != address(0)) {
+            rewards[staker] = earnedFBT(staker);
+            userRewardPerTokenPaid[staker] = rewardPerTokenStored;
+        }
+
+        usdtRewards[staker] += earnedUSDT(staker);
+        userUsdtRewardPerTokenPaid[staker] = usdtRewardPerTokenStored;
         _;
     }
 
     constructor(
         address _morphoVault,
         address _usdt,
+        address _fbt,
         address _beneficiary,
         address _platformWallet,
         address _factoryAddress,
@@ -66,37 +88,20 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
     ) Ownable(_owner) {
         METAMORPHO_VAULT = IMetaMorpho(_morphoVault);
         USDT = IERC20(_usdt);
-        
+        FBT = IERC20(_fbt);
         beneficiary = _beneficiary;
         platformWallet = _platformWallet;
         factoryAddress = _factoryAddress;
 
+        rewardsDuration = 7 days;
+
         USDT.approve(address(METAMORPHO_VAULT), type(uint256).max);
     }
 
-    /**
-     * @dev Calculates the rewards a staker is owed.
-     */
-    function earned(address staker) public view returns (uint256) {
-        uint256 rewardPerToken = (rewardPerTokenStored * 1e18) / 1e18;
-        return
-            (stakerPrincipal[staker] *
-                (rewardPerToken - userRewardPerTokenPaid[staker])) /
-            1e18;
-    }
-
-    /**
-     * @dev Public view function for the "mailbox"
-     */
-    function claimableRewards(address staker) public view returns (uint256) {
-        return rewards[staker] + earned(staker);
-    }
-
-    // --- Staking Functions ---
+    // --- Core Staking Functions ---
 
     /**
      * @dev Called by the Factory.
-     * Takes USDT from factory, deposits it into Morpho for shares.
      */
     function depositFor(address staker, uint256 usdtAmount)
         external
@@ -105,7 +110,6 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
         updateReward(staker)
     {
         require(usdtAmount > 0, "Amount must be > 0");
-        //USDT.safeTransferFrom(factoryAddress, address(this), usdtAmount);
         
         METAMORPHO_VAULT.deposit(usdtAmount, address(this));
 
@@ -117,7 +121,6 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
 
     /**
      * @dev Staker withdraws their principal.
-     * Redeems this contract's shares for USDT and sends to staker.
      */
     function unstake(uint256 usdtAmount)
         external
@@ -135,34 +138,57 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
         emit Unstaked(msg.sender, usdtAmount);
     }
 
-    // --- Reward Functions ---
+    // --- Reward Claiming ---
 
-    /**
-     * @dev Staker claims their share of the 19% pool. 
-     */
-    function claimStakerRewards() external nonReentrant updateReward(msg.sender) {
+    function claimAllRewards() external nonReentrant updateReward(msg.sender) {
+        _claimUSDT();
+        _claimFBT();
+    }
+
+    function _claimUSDT() internal {
+        uint256 reward = usdtRewards[msg.sender];
+        if (reward > 0) {
+            usdtRewards[msg.sender] = 0;
+            USDT.safeTransfer(msg.sender, reward);
+            emit UsdtRewardsClaimed(msg.sender, reward);
+        }
+    }
+
+    function _claimFBT() internal {
         uint256 reward = rewards[msg.sender];
-        require(reward > 0, "No rewards to claim");
-
-        rewards[msg.sender] = 0;
-        USDT.safeTransfer(msg.sender, reward);
-
-        emit RewardsClaimed(msg.sender, reward);
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            FBT.safeTransfer(msg.sender, reward);
+            emit FbtRewardsClaimed(msg.sender, reward);
+        }
     }
 
     /**
+     * @dev Legacy support for claiming just staking rewards (USDT)
+     */
+    function claimStakerRewards() external nonReentrant updateReward(msg.sender) {
+        _claimUSDT();
+    }
+
+    // --- Harvest Logic ---
+
+    /**
      * @dev Harvests yield from Morpho and splits it 79/19/2.
-     * Anyone can call this.
      */
     function harvestAndDistribute() external nonReentrant {
+        // Calculate Yield from Morpho
         uint256 totalShares = METAMORPHO_VAULT.balanceOf(address(this));
-        
         uint256 currentAssetValue = METAMORPHO_VAULT.previewRedeem(totalShares);
+        
+        if (currentAssetValue <= totalStakedPrincipal) return;
+
         uint256 yield = currentAssetValue - totalStakedPrincipal;
         require(yield > 0, "No yield to harvest");
 
+        // Withdraw ONLY the yield
         METAMORPHO_VAULT.withdraw(yield, address(this), address(this));
 
+        // Split
         uint256 fundraiserShare = (yield * FUNDRAISER_SHARE) / TOTAL_BASIS;
         uint256 stakerShare = (yield * STAKER_SHARE) / TOTAL_BASIS;
         uint256 platformShare = (yield * PLATFORM_SHARE) / TOTAL_BASIS;
@@ -170,10 +196,62 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable {
         USDT.safeTransfer(beneficiary, fundraiserShare);
         USDT.safeTransfer(platformWallet, platformShare);
 
+        // Update Staker Yield Index
         if (totalStakedPrincipal > 0) {
-            rewardPerTokenStored += (stakerShare * 1e18) / totalStakedPrincipal;
+            usdtRewardPerTokenStored += (stakerShare * 1e18) / totalStakedPrincipal;
         }
 
         emit YieldHarvested(yield, stakerShare);
+    }
+
+    // --- View Functions (Math) ---
+
+    // 1. USDT Yield Math
+    function earnedUSDT(address staker) public view returns (uint256) {
+        return (stakerPrincipal[staker] * (usdtRewardPerTokenStored - userUsdtRewardPerTokenPaid[staker])) / 1e18;
+    }
+
+    // 2. FBT Reward Math
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return block.timestamp < periodFinish ? block.timestamp : periodFinish;
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalStakedPrincipal == 0) {
+            return rewardPerTokenStored;
+        }
+        return rewardPerTokenStored + (
+            (lastTimeRewardApplicable() - lastUpdateTime) * rewardRate * 1e18 / totalStakedPrincipal
+        );
+    }
+
+    function earnedFBT(address account) public view returns (uint256) {
+        return (
+            (stakerPrincipal[account] * (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18
+        ) + rewards[account];
+    }
+
+    // --- Admin (FBT Funding) ---
+
+    function notifyRewardAmount(uint256 reward) external onlyOwner updateReward(address(0)) {
+        require(FBT.balanceOf(address(this)) >= reward, "Insufficient FBT");
+
+        if (block.timestamp >= periodFinish) {
+            rewardRate = reward / rewardsDuration;
+        } else {
+            uint256 remaining = periodFinish - block.timestamp;
+            uint256 leftover = remaining * rewardRate;
+            rewardRate = (reward + leftover) / rewardsDuration;
+        }
+
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp + rewardsDuration;
+        
+        emit RewardAdded(reward);
+    }
+    
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
+        require(block.timestamp > periodFinish, "Period not finished");
+        rewardsDuration = _rewardsDuration;
     }
 }
