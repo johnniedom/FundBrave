@@ -87,6 +87,7 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     IERC20 public USDC;   
     IERC20 public aUSDC;
     IReceiptOFT public receiptOFT;
+    IERC20 public FBT;
 
     // --- Config ---
     address public beneficiary; 
@@ -112,19 +113,40 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     uint256 public constant PLATFORM_SHARE = 200;
     uint256 public constant TOTAL_BASIS = 10000;
 
+    // --- Yield Rewards (USDC) ---
+    uint256 public usdcRewardPerTokenStored;
+    mapping(address => uint256) public userUsdcRewardPerTokenPaid;
+    mapping(address => uint256) public usdcRewards;
+
+    // --- FBT Liquidity Mining State (NEW) ---
+    uint256 public periodFinish;
+    uint256 public rewardRate;
+    uint256 public rewardsDuration;
+    uint256 public lastUpdateTime;
+
     event Staked(address indexed staker, uint256 usdcAmount);
     event Unstaked(address indexed staker, uint256 usdcAmount);
     event YieldHarvested(uint256 totalYield, uint256 stakerShare);
-    event RewardsClaimed(address indexed staker, uint256 amount);
+    event UsdcRewardsClaimed(address indexed staker, uint256 amount);
+    event RewardAdded(uint256 reward);
+    event FbtRewardPaid(address indexed user, uint256 reward);
 
     modifier onlyFactory() {
         require(msg.sender == factoryAddress, "StakingPool: Only factory");
         _;
     }
 
-    modifier updateReward(address staker) {
-        rewards[staker] += earned(staker);
-        userRewardPerTokenPaid[staker] = rewardPerTokenStored;
+    modifier updateReward(address account) {
+        rewardPerTokenStored = rewardPerToken();
+        lastUpdateTime = lastTimeRewardApplicable();
+        if (account != address(0)) {
+            rewards[account] = earnedFBT(account);
+            userRewardPerTokenPaid[account] = rewardPerTokenStored;
+        }
+
+        // 2. Update USDC Yield Rewards
+        usdcRewards[account] += earnedUSDC(account);
+        userUsdcRewardPerTokenPaid[account] = usdcRewardPerTokenStored;
         _;
     }
 
@@ -138,6 +160,7 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
             address _usdc,
             address _aUsdc,
             address _receiptOFT,
+            address _fbt,
             address _beneficiary,
             address _platformWallet,
             address _factoryAddress,
@@ -150,17 +173,20 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
             __ReentrancyGuard_init();
             __Pausable_init();
 
-        // Init State
-        AAVE_POOL = IAavePool(_aavePool);
-        USDC = IERC20(_usdc);
-        aUSDC = IERC20(_aUsdc);
-        receiptOFT = IReceiptOFT(_receiptOFT);
-        beneficiary = _beneficiary;
-        platformWallet = _platformWallet;
-        factoryAddress = _factoryAddress;
+            // Init State
+            AAVE_POOL = IAavePool(_aavePool);
+            USDC = IERC20(_usdc);
+            aUSDC = IERC20(_aUsdc);
+            receiptOFT = IReceiptOFT(_receiptOFT);
+            FBT = IERC20(_fbt);
+            beneficiary = _beneficiary;
+            platformWallet = _platformWallet;
+            factoryAddress = _factoryAddress;
 
-        // Infinite approve Aave to spend our USDC
-        USDC.approve(address(AAVE_POOL), type(uint256).max);
+            rewardsDuration = 7 days;
+
+            // Infinite approve Aave to spend our USDC
+            USDC.approve(address(AAVE_POOL), type(uint256).max);
     }
 
     // --- Automation ---
@@ -180,8 +206,8 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
     // --- Core Logic ---
 
     function earned(address staker) public view returns (uint256) {
-        uint256 rewardPerToken = (rewardPerTokenStored * 1e18) / 1e18;
-        return (stakerPrincipal[staker] * (rewardPerToken - userRewardPerTokenPaid[staker])) / 1e18;
+        uint256 currentRewardPerToken = rewardPerToken();
+        return (stakerPrincipal[staker] * (currentRewardPerToken - userRewardPerTokenPaid[staker])) / 1e18;
     }
 
     function claimableRewards(address staker) public view returns (uint256) {
@@ -228,12 +254,32 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         emit Unstaked(msg.sender, usdcAmount);
     }
 
-    function claimStakerRewards() external nonReentrant whenNotPaused updateReward(msg.sender) {
+    /**
+     * @notice Claims BOTH USDC Yield and FBT Rewards
+     */
+    function claimAllRewards() external nonReentrant whenNotPaused updateReward(msg.sender) {
+        _claimUSDC();
+        _claimFBT();
+    }
+
+    function _claimUSDC() internal {
+        uint256 reward = usdcRewards[msg.sender];
+        if (reward > 0) {
+            usdcRewards[msg.sender] = 0;
+            USDC.safeTransfer(msg.sender, reward);
+            emit UsdcRewardsClaimed(msg.sender, reward);
+        }
+    }
+
+    function _claimFBT() internal {
         uint256 reward = rewards[msg.sender];
-        require(reward > 0, "No rewards to claim");
-        rewards[msg.sender] = 0;
-        USDC.safeTransfer(msg.sender, reward);
-        emit RewardsClaimed(msg.sender, reward);
+        if (reward > 0) {
+            rewards[msg.sender] = 0;
+            // NOTE: We transfer FBT, not mint. 
+            // The Admin/DAO must fund this contract with FBT using notifyRewardAmount first.
+            FBT.safeTransfer(msg.sender, reward); 
+            emit FbtRewardPaid(msg.sender, reward);
+        }
     }
 
     function harvestAndDistribute() public nonReentrant whenNotPaused {
@@ -257,6 +303,54 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
 
         lastHarvestTimestamp = block.timestamp;
         emit YieldHarvested(yield, stakerShare);
+    }
+
+    function earnedUSDC(address staker) public view returns (uint256) {
+        return (stakerPrincipal[staker] * (usdcRewardPerTokenStored - userUsdcRewardPerTokenPaid[staker])) / 1e18;
+    }
+
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return block.timestamp < periodFinish ? block.timestamp : periodFinish;
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalStakedPrincipal == 0) {
+            return rewardPerTokenStored;
+        }
+        return rewardPerTokenStored + (
+            (lastTimeRewardApplicable() - lastUpdateTime) * rewardRate * 1e18 / totalStakedPrincipal
+        );
+    }
+
+    function earnedFBT(address account) public view returns (uint256) {
+        return (
+            (stakerPrincipal[account] * (rewardPerToken() - userRewardPerTokenPaid[account])) / 1e18
+        ) + rewards[account];
+    }
+
+    // --- Admin (FBT Funding) ---
+    
+    // Admin calls this after sending FBT to this contract to start distribution
+    function notifyRewardAmount(uint256 reward) external onlyOwner updateReward(address(0)) {
+        require(FBT.balanceOf(address(this)) >= reward, "Insufficient FBT in contract");
+
+        if (block.timestamp >= periodFinish) {
+            rewardRate = reward / rewardsDuration;
+        } else {
+            uint256 remaining = periodFinish - block.timestamp;
+            uint256 leftover = remaining * rewardRate;
+            rewardRate = (reward + leftover) / rewardsDuration;
+        }
+
+        lastUpdateTime = block.timestamp;
+        periodFinish = block.timestamp + rewardsDuration;
+        
+        emit RewardAdded(reward);
+    }
+    
+    function setRewardsDuration(uint256 _rewardsDuration) external onlyOwner {
+        require(block.timestamp > periodFinish, "Period not finished");
+        rewardsDuration = _rewardsDuration;
     }
 
     // --- Admin ---
