@@ -1,3 +1,4 @@
+import { ComponentType } from "react";
 import {
   VerifyEmail,
   ProfileDetails,
@@ -14,7 +15,20 @@ import {
   RocketIcon,
 } from "../app/components/onboarding/icons";
 
-export const ONBOARDING_STEPS = [
+export interface StepComponentProps {
+  onNext?: () => void;
+  onBack?: () => void;
+}
+
+export interface OnboardingStep {
+  slug: string;
+  title: string;
+  subtitle: string;
+  Icon: ComponentType<{ className?: string }>;
+  Component: ComponentType<StepComponentProps>;
+}
+
+export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     slug: "verify-email",
     title: "Verify your email",

@@ -1,11 +1,7 @@
-import React from 'react'
+import { redirect } from "next/navigation";
+import { ONBOARDING_STEPS } from "@/lib/onboarding-steps";
 
-const page = () => {
-  return (
-    <div>
-      
-    </div>
-  )
+export default function OnboardingPage() {
+  // Redirect to the first onboarding step
+  redirect(`/onboarding/${ONBOARDING_STEPS[0].slug}`);
 }
-
-export default page

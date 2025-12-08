@@ -1,23 +1,14 @@
 "use client";
 
 import { motion } from "motion/react";
-import { AuthHeroContent } from "../../../lib/auth-hero-content";
+import { AuthHeroContent } from "./AuthHeroContent";
 
-// MAINTAINER'S NOTE (Component Interface):
-// Clean interface definition for the AuthHero component.
-// This ensures type safety and makes the component's API clear.
 interface AuthHeroProps {
   variant: "signup" | "login";
 }
 
-// MAINTAINER'S NOTE (Hero Component):
-// This component renders the animated hero content for the auth flow.
-// It includes staggered animations and smooth transitions to create
 // an engaging user experience that guides attention naturally.
 export default function AuthHero({ variant }: AuthHeroProps) {
-  // MAINTAINER'S NOTE (Content Selection):
-  // We find the appropriate hero content based on the current variant.
-  // This approach makes adding new variants simple and maintainable.
   const hero = AuthHeroContent.find((item) => item.key === variant);
 
   if (!hero) {
@@ -31,9 +22,6 @@ export default function AuthHero({ variant }: AuthHeroProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: "easeOut" }}
     >
-      {/* MAINTAINER'S NOTE (Background Animation):
-          Subtle rotating background element that adds visual interest
-          without being distracting. The slow rotation creates a sense of life. */}
       <motion.div
         className="absolute inset-0 opacity-5"
         animate={{
@@ -49,25 +37,13 @@ export default function AuthHero({ variant }: AuthHeroProps) {
         <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl" />
       </motion.div>
 
-     
-      <div className="relative w-64 h-64 mb-6 flex items-center justify-center">
-        {/* Outer glow effect */}
-        <motion.div
-          className="absolute w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
+      <div className="relative w-96 h-96 flex items-center justify-center flex-shrink-0">
+        {/* a gradient color effect that starts from the center and radiates up and down top into the background */}
+        {/* <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl" /> */}
 
         {/* Main container with subtle rotation */}
         <motion.div
-          className="relative w-40 h-40 flex items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-sm shadow-2xl"
+          className="absolute inset-0 flex items-center justify-center"
           initial={{ scale: 0.65, opacity: 0, rotateY: -65 }}
           animate={{ scale: 1, opacity: 1, rotateY: 0 }}
           transition={{
@@ -84,7 +60,7 @@ export default function AuthHero({ variant }: AuthHeroProps) {
         >
           {/* Icon with floating animation */}
           <motion.div
-            className="relative z-10"
+            className="absolute z-10 size-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25, duration: 0.35 }}
@@ -98,13 +74,9 @@ export default function AuthHero({ variant }: AuthHeroProps) {
         </motion.div>
       </div>
 
-      {/* MAINTAINER'S NOTE (Hero Text with Staggered Animation):
-          Text content with carefully timed animations that create
-          a natural reading flow. Each element enters slightly after
-          the previous one, guiding user attention. */}
       <div className="text-center max-w-md space-y-4 relative z-10">
         <motion.h2
-          className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
+          className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent"
           initial={{ opacity: 0, y: 18, scale: 0.92 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{
@@ -131,7 +103,7 @@ export default function AuthHero({ variant }: AuthHeroProps) {
         </motion.p>
       </div>
 
-      {/* MAINTAINER'S NOTE (Decorative Elements):
+      {/*
           Subtle floating elements that add visual interest without
           overwhelming the main content. These create depth and movement. */}
       <motion.div

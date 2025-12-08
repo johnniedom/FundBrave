@@ -3,14 +3,8 @@ import React from "react";
 import * as z from "zod";
 import { signUpSchema } from "../../../lib/validation.utils";
 import { motion } from "motion/react";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import Link from "next/link";
-
-// MAINTAINER'S NOTE (Component Imports):
-// We import all reusable auth components to maintain consistency
-// across the authentication flow. This modular approach makes
-// maintenance easier and ensures visual coherence.
+import { useRouter } from "next/navigation";
 
 // Import reusable components
 import AuthLogo from "../../components/auth/AuthLogo";
@@ -21,21 +15,11 @@ import ServerError from "../../components/auth/ServerError";
 import FormInput from "../../components/auth/FormInput";
 import LoadingButton from "../../components/auth/LoadingButton";
 
-// MAINTAINER'S NOTE (Type Definitions):
-// We infer the SignUpData type from our Zod schema to ensure
-// type safety and consistency between validation and component state.
 type SignUpData = z.infer<typeof signUpSchema>;
 
-// MAINTAINER'S NOTE (Component Interface):
-// Clear interface definition for the SignUp component props.
-// The onToggle callback enables smooth switching to login view.
 interface SignUpPageProps {
   onToggle: () => void;
 }
-
-// MAINTAINER'S NOTE (SignUp Component):
-// Main signup component with comprehensive form handling,
-// validation, and smooth animations throughout the user experience.
 export default function SignUpPage({ onToggle }: SignUpPageProps) {
   const router = useRouter();
   const [formData, setFormData] = React.useState<SignUpData>({
@@ -76,7 +60,7 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           const fieldName = err.path[0] as keyof SignUpData;
           if (
             fieldName === "confirmPassword" &&
@@ -111,87 +95,45 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
       return;
     }
 
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    // Store email and username in localStorage for onboarding
+    if (typeof window !== "undefined") {
+      const onboardingData = {
+        email: formData.email,
+        profile: {
+          fullName: formData.username,
+          email: formData.email,
+          birthdate: "",
+          bio: "",
+          avatar: "",
         },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.errors) {
-          // Handle validation errors from backend
-          const backendErrors: Record<string, string> = {};
-          data.errors.forEach((err: any) => {
-            backendErrors[err.field] = err.message;
-          });
-          setErrors(backendErrors);
-        } else {
-          setServerError(data.message || "An error occurred");
-        }
-        return;
-      }
-
-      // Success - redirect to dashboard or login
-      router.push("/leaderboard");
-    } catch (error) {
-      setServerError("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+        social: { twitter: "", instagram: "", linkedin: "", github: "" },
+        goals: [],
+        isComplete: false,
+      };
+      localStorage.setItem("onboarding_data", JSON.stringify(onboardingData));
     }
+
+    // Redirect to onboarding
+    setIsSubmitting(false);
+    router.push("/onboarding");
   };
 
   const handleGoogleLogin = async () => {
     setIsOAuthLoading({ ...isOAuthLoading, google: true });
-    try {
-      const result = await signIn("google", {
-        callbackUrl: "/leaderboard",
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setServerError("Google sign in failed. Please try again.");
-      } else if (result?.url) {
-        router.push(result.url);
-      }
-    } catch (error) {
-      setServerError("Google sign in failed. Please try again.");
-    } finally {
-      setIsOAuthLoading({ ...isOAuthLoading, google: false });
-    }
+    setServerError("Google sign in is disabled in this build.");
+    setIsOAuthLoading({ ...isOAuthLoading, google: false });
   };
 
   const handleXLogin = async () => {
     setIsOAuthLoading({ ...isOAuthLoading, twitter: true });
-    try {
-      const result = await signIn("twitter", {
-        callbackUrl: "/leaderboard",
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setServerError("Twitter sign in failed. Please try again.");
-      } else if (result?.url) {
-        router.push(result.url);
-      }
-    } catch (error) {
-      setServerError("Twitter sign in failed. Please try again.");
-    } finally {
-      setIsOAuthLoading({ ...isOAuthLoading, twitter: false });
-    }
+    setServerError("Twitter sign in is disabled in this build.");
+    setIsOAuthLoading({ ...isOAuthLoading, twitter: false });
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-2">
-      {/* MAINTAINER'S NOTE (Main Form Container):
-          Responsive container with backdrop blur effect for modern glass-morphism design.
-          The container provides structure while maintaining visual hierarchy. */}
+    <div className="flex min-h-screen w-full items-center justify-center p-2 ">
       <motion.div
-        className="w-full max-w-2xl rounded-2xl p-4 backdrop-blur-md"
+        className="w-full max-w-2x p-4"
         initial={{ opacity: 0, scale: 0.96, y: 18 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{
@@ -204,7 +146,7 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
         <AuthLogo />
 
         <AuthHeader
-          title="Join Our Referral Program"
+          title="Let's get started!"
           subtitle="Register with your details to get started"
         />
 
@@ -219,12 +161,8 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
 
         <ServerError error={serverError} />
 
-        {/* MAINTAINER'S NOTE (Form Animation):
-            The form uses staggered animations to create a natural flow.
-            Each form element appears with a slight delay, guiding user attention
-            through the registration process step by step. */}
         <motion.form
-          className="w-full space-y-6"
+          className="w-full space-y-4"
           onSubmit={handleSubmit}
           onChange={handleValidate}
           initial={{ opacity: 0, y: 24 }}
@@ -240,8 +178,8 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
             id="username"
             name="username"
             type="text"
-            label="Username"
-            placeholder="@johndoe"
+            label="Name"
+            placeholder="John Doe"
             value={formData.username}
             onChange={handleInputChange}
             error={errors.username}
@@ -284,28 +222,15 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
             delay={0.2}
           />
 
-          {/* Mobile Forgot Password */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="mb-6 ml-auto block md:hidden"
-          >
-            <Link
-              href="/forgot-password"
-              className="justify-self-end text-purple-400 transition-colors hover:text-purple-300"
-            >
-              Forgot Password?
-            </Link>
-          </motion.div>
-
           {/* Checkbox and Forgot Password */}
           <motion.div
-            className="grid-col-1 grid w-full items-center gap-2 md:grid-cols-2"
+            className="space-y-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.1, duration: 0.4 }}
           >
             <motion.label
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               whileHover={{ scale: 1.02 }}
             >
               <motion.input
@@ -316,25 +241,13 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
                 onChange={handleInputChange}
                 className="custom-checkbox"
               />
-              <span className="text-white">
+              <span className="text-white text-sm">
                 I agree to terms and conditions
               </span>
             </motion.label>
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="ml-auto hidden md:block"
-            >
-              <Link
-                href="/forgot-password"
-                className="justify-self-end text-purple-400 transition-colors hover:text-purple-300"
-              >
-                Forgot Password?
-              </Link>
-            </motion.div>
-
             <motion.label
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               whileHover={{ scale: 1.02 }}
             >
               <motion.input
@@ -345,10 +258,19 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
                 onChange={handleInputChange}
                 className="custom-checkbox"
               />
-              <span className="text-white">
+              <span className="text-white text-sm">
                 I agree to receive email updates
               </span>
             </motion.label>
+
+            <motion.div whileHover={{ scale: 1.02 }} className="text-right">
+              <Link
+                href="/forgot-password"
+                className="text-purple-400 transition-colors hover:text-purple-300 text-sm"
+              >
+                Forgot Password?
+              </Link>
+            </motion.div>
           </motion.div>
 
           <LoadingButton

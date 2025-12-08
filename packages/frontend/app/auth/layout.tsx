@@ -11,7 +11,7 @@ export default function AuthLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="custom-scrollbar">
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>

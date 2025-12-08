@@ -26,11 +26,11 @@ type OnboardingContextValue = {
   goToStepIndex: (i: number) => void;
 };
 
-export const onBoardingContext = createContext<
+export const OnboardingContext = createContext<
   OnboardingContextValue | undefined
 >(undefined);
 
-export const onBoardingContextProvider = ({
+export const OnboardingContextProvider = ({
   children,
 }: OnboardingProviderProps) => {
   const router = useRouter();
@@ -103,14 +103,14 @@ export const onBoardingContextProvider = ({
   );
 
   return (
-    <onBoardingContext.Provider value={optimizedValue}>
+    <OnboardingContext.Provider value={optimizedValue}>
       {children}
-    </onBoardingContext.Provider>
+    </OnboardingContext.Provider>
   );
 };
 
 export const useOnboarding = () => {
-  const context = useContext(onBoardingContext);
+  const context = useContext(OnboardingContext);
   if (context === undefined) {
     throw new Error("useOnboarding must be used within an OnboardingProvider");
   }

@@ -3,15 +3,24 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
+interface ShareCategory {
+  label: string;
+}
+
 interface ShareCampaignModalProps {
   isOpen: boolean;
   onClose: () => void;
   campaignUrl?: string;
   campaignTitle?: string;
+  url?: string; // alias for campaignUrl
+  title?: string; // alias for campaignTitle
+  text?: string;
+  categories?: ShareCategory[];
+  onShare?: (network: string) => void;
 }
 
-// Community categories data
-const communityCategories = [
+// Community categories data (fallback when caller does not provide categories)
+const defaultCommunityCategories = [
   {
     id: "healthcare",
     name: "Healthcare",
@@ -139,8 +148,24 @@ const ShareCampaignModal: React.FC<ShareCampaignModalProps> = ({
   onClose,
   campaignUrl = "https://www.fundbrave.com/campaign/supportjohnsfightagains...",
   campaignTitle = "Support Johns fight against cancer",
+  url,
+  title,
+  text,
+  categories,
+  onShare,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
+
+  const resolvedCampaignUrl = url ?? campaignUrl;
+  const resolvedCampaignTitle = title ?? campaignTitle;
+
+  const customCategories = categories?.map((category, idx) => ({
+    id: `custom-${idx}`,
+    name: category.label,
+    color: "bg-gradient-to-r from-purple-500 to-pink-500",
+  }));
+
+  const categoryList = customCategories ?? defaultCommunityCategories;
 
   const handleCopyLink = async () => {
     try {
@@ -153,35 +178,36 @@ const ShareCampaignModal: React.FC<ShareCampaignModalProps> = ({
   };
 
   const handleSocialShare = (platformId: string) => {
-    const text = `Help me support "${campaignTitle}" on FundBrave`;
-    const url = encodeURIComponent(campaignUrl);
-    const textEncoded = encodeURIComponent(text);
+    const shareText = `Help me support "${resolvedCampaignTitle}" on FundBrave`;
+    const encodedUrl = encodeURIComponent(resolvedCampaignUrl);
+    const textEncoded = encodeURIComponent(shareText);
 
     let shareUrl = "";
 
     switch (platformId) {
       case "facebook":
-        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
         break;
       case "twitter":
-        shareUrl = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${url}`;
+        shareUrl = `https://twitter.com/intent/tweet?text=${textEncoded}&url=${encodedUrl}`;
         break;
       case "linkedin":
-        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
         break;
       case "whatsapp":
-        shareUrl = `https://wa.me/?text=${textEncoded}%20${url}`;
+        shareUrl = `https://wa.me/?text=${textEncoded}%20${encodedUrl}`;
         break;
       case "email":
         shareUrl = `mailto:?subject=${encodeURIComponent(
-          campaignTitle
-        )}&body=${textEncoded}%20${url}`;
+          resolvedCampaignTitle
+        )}&body=${textEncoded}%20${encodedUrl}`;
         break;
       default:
         return;
     }
 
     window.open(shareUrl, "_blank", "width=600,height=400");
+    onShare?.(platformId);
   };
 
   return (
@@ -237,16 +263,16 @@ const ShareCampaignModal: React.FC<ShareCampaignModalProps> = ({
               <div className="space-y-7">
                 <div className="space-y-1.5">
                   <h2 className="text-xl font-medium text-white leading-[30px] tracking-[0.48px]">
-                    Share to your FundBrave community
+                    {resolvedCampaignTitle}
                   </h2>
                   <p className="text-base text-white/80 leading-6 tracking-[0.3072px] max-w-[476px]">
-                    Share this campaign based on the community missions and
-                    values
+                    {text ??
+                      "Share this campaign based on the community missions and values"}
                   </p>
                 </div>
 
                 <div className="flex gap-8 flex-wrap">
-                  {communityCategories.map((category) => (
+                  {categoryList.map((category) => (
                     <motion.button
                       key={category.id}
                       className="flex flex-col items-center gap-2 group"
@@ -319,7 +345,7 @@ const ShareCampaignModal: React.FC<ShareCampaignModalProps> = ({
                     />
                   </svg>
                   <span className="text-white/80 text-base leading-6 tracking-[0.3072px] truncate flex-1">
-                    {campaignUrl}
+                    {resolvedCampaignUrl}
                   </span>
                 </div>
                 <motion.button

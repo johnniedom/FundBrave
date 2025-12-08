@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="custom-scrollbar">
         <ThemeProvider defaultTheme="dark" storageKey="fundbrave-theme">
           {children}
         </ThemeProvider>

@@ -1,15 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import Link from "next/link";
 import * as z from "zod";
 import { motion } from "motion/react";
 import { loginSchema } from "../../../lib/validation.utils";
-import { useAuth } from "../../components/ui/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
-// Import reusable components
 // Import reusable components
 import AuthLogo from "../../components/auth/AuthLogo";
 import AuthHeader from "../../components/auth/AuthHeader";
@@ -26,8 +23,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ onToggle }: LoginPageProps) {
   const router = useRouter();
-  const { refreshUser } = useAuth();
-
+  
   // Form state
   const [formData, setFormData] = useState<LoginFormValues>({
     username: "",
@@ -71,7 +67,7 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err: z.ZodIssue) => {
+        error.issues.forEach((err: z.ZodIssue) => {
           if (err.path[0]) {
             fieldErrors[err.path[0] as string] = err.message;
           }
@@ -94,80 +90,47 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
 
     setIsSubmitting(true);
 
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.errors) {
-          // Handle validation errors from backend
-          const backendErrors: Record<string, string> = {};
-          data.errors.forEach((err: any) => {
-            backendErrors[err.field] = err.message;
-          });
-          setErrors(backendErrors);
-        } else {
-          setServerError(data.message || "Login failed");
-        }
-        return;
+    // Store email in localStorage for onboarding (extracted from username if it's an email)
+    if (typeof window !== "undefined") {
+      const isEmail = formData.username.includes("@");
+      const existingData = localStorage.getItem("onboarding_data");
+      
+      // Check if user needs onboarding (no existing data means first time)
+      if (!existingData) {
+        const onboardingData = {
+          email: isEmail ? formData.username : "",
+          profile: {
+            fullName: "",
+            email: isEmail ? formData.username : "",
+            birthdate: "",
+            bio: "",
+            avatar: "",
+          },
+          social: { twitter: "", instagram: "", linkedin: "", github: "" },
+          goals: [],
+          isComplete: false,
+        };
+        localStorage.setItem("onboarding_data", JSON.stringify(onboardingData));
       }
-
-      // Success - redirect to dashboard
-      await refreshUser();
-
-      router.push("/leaderboard");
-    } catch (error) {
-      setServerError("Something went wrong. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    // Redirect to onboarding
+    setIsSubmitting(false);
+    router.push("/onboarding");
   };
 
   // Google OAuth handler
   const handleGoogleLogin = async () => {
     setIsOAuthLoading({ ...isOAuthLoading, google: true });
-    try {
-      const result = await signIn("google", {
-        callbackUrl: "/leaderboard",
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setServerError("Google sign in failed. Please try again.");
-      } else if (result?.url) {
-        router.push(result.url);
-      }
-    } catch (error) {
-      setServerError("Google sign in failed. Please try again.");
-    } finally {
-      setIsOAuthLoading({ ...isOAuthLoading, google: false });
-    }
+    setServerError("Google sign in is disabled in this build.");
+    setIsOAuthLoading({ ...isOAuthLoading, google: false });
   };
 
   // Twitter OAuth handler
   const handleXLogin = async () => {
     setIsOAuthLoading({ ...isOAuthLoading, twitter: true });
-    try {
-      const result = await signIn("twitter", {
-        callbackUrl: "/leaderboard",
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setServerError("Twitter sign in failed. Please try again.");
-      } else if (result?.url) {
-        router.push(result.url);
-      }
-    } catch (error) {
-      setServerError("Twitter sign in failed. Please try again.");
-    } finally {
-      setIsOAuthLoading({ ...isOAuthLoading, twitter: false });
-    }
+    setServerError("Twitter sign in is disabled in this build.");
+    setIsOAuthLoading({ ...isOAuthLoading, twitter: false });
   };
 
   return (
@@ -201,11 +164,11 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
           className="space-y-4"
           initial={{ opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ 
-            delay: 0.2, 
+          transition={{
+            delay: 0.2,
             type: "spring",
             stiffness: 320,
-            damping: 22
+            damping: 22,
           }}
         >
           <FormInput
@@ -248,6 +211,7 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
                 name="keepLoggedIn"
                 checked={formData.keepLoggedIn}
                 onChange={handleInputChange}
+                placeholder="/"
                 className="custom-checkbox"
               />
               <span className="text-white">Keep me logged in</span>
