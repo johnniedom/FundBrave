@@ -1,0 +1,942 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTHENTICATION ====================
+
+model User {
+  id String @id @default(uuid())
+
+  // Identity (Web3 Primary, Web2 Optional)
+  walletAddress String  @unique
+  username      String? @unique
+
+  // Web2 Auth (Optional for hybrid users)
+  email         String? @unique
+  emailVerified Boolean @default(false)
+  passwordHash  String?
+  googleId      String?
+  twitterId     String?
+
+  // Managed Wallet (Encrypted for Web2 users)
+  encryptedPrivateKey String?
+  encryptionIv        String?
+
+  // Profile
+  displayName String?
+  bio         String? @db.Text
+  avatarUrl   String?
+  bannerUrl   String?
+  location    String?
+  website     String?
+
+  // Verification & Reputation
+  worldIdVerified   Boolean            @default(false)
+  worldIdNullifier  String?            @unique
+  isVerifiedCreator Boolean            @default(false)
+  verificationBadge VerificationBadge?
+  reputationScore   Int                @default(0)
+
+  // Social Stats (Denormalized for performance)
+  followersCount   Int    @default(0)
+  followingCount   Int    @default(0)
+  postsCount       Int    @default(0)
+  fundraisersCount Int    @default(0)
+  totalDonated     String @default("0")
+  totalStaked      String @default("0")
+
+  // Privacy
+  isPrivate        Boolean @default(false)
+  isActive         Boolean @default(true)
+  isSuspended      Boolean @default(false)
+  suspensionReason String?
+
+  // Timestamps
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSeenAt DateTime?
+
+  // Relations
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  bookmarks        Bookmark[]
+  reposts          Repost[]
+  followedBy       Follow[]                  @relation("following")
+  following        Follow[]                  @relation("follower")
+  blockedBy        Block[]                   @relation("blocking")
+  blocking         Block[]                   @relation("blocked")
+  fundraisers      Fundraiser[]
+  donations        Donation[]
+  stakes           Stake[]
+  votes            Vote[]
+  proposals        Proposal[]
+  notifications    Notification[]            @relation("recipient")
+  triggeredNotifs  Notification[]            @relation("actor")
+  sentMessages     Message[]                 @relation("sender")
+  receivedMessages Message[]                 @relation("receiver")
+  conversations    ConversationParticipant[]
+  sessions         Session[]
+  activities       ActivityLog[]
+  reports          Report[]                  @relation("reporter")
+  reportedContent  Report[]                  @relation("reported")
+
+  // New Global Pool Relations
+  globalVotes GlobalPoolVote[]
+  fbtClaims   RewardClaim[]
+  fbtLocks    GlobalPoolLock[]
+
+  notificationSetting NotificationSetting?
+  deviceTokens        DeviceToken[]
+  nonce               String?              @default(uuid())
+
+  @@index([walletAddress])
+  @@index([username])
+  @@index([email])
+  @@map("users")
+}
+
+enum VerificationBadge {
+  NONE
+  WORLD_ID
+  VERIFIED_CREATOR
+  OFFICIAL
+  GOLD // For high-reputation users
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  refreshToken String?  @unique
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+// ==================== SOCIAL GRAPH ====================
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  blocker   User     @relation("blocking", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ==================== POSTS & CONTENT ====================
+
+model Post {
+  id      String   @id @default(uuid())
+  content String?  @db.Text
+  type    PostType @default(TEXT)
+
+  // Author
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Media
+  mediaUrls String[]
+  media     Media[]
+
+  // Hashtags & Mentions
+  tags     PostHashtag[]
+  mentions String[]
+
+  // Fundraiser link
+  fundraiserId String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
+
+  // Thread/Reply
+  parentId   String?
+  parent     Post?   @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Post[]  @relation("PostReplies")
+  replyCount Int     @default(0)
+
+  // Engagement (Denormalized)
+  likesCount      Int   @default(0)
+  repostsCount    Int   @default(0)
+  bookmarksCount  Int   @default(0)
+  viewsCount      Int   @default(0)
+  engagementScore Float @default(0) // Calculated for feed algorithm
+
+  // Visibility
+  visibility  PostVisibility @default(PUBLIC)
+  isPinned    Boolean        @default(false)
+  isEdited    Boolean        @default(false)
+  editHistory Json?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  likes     Like[]
+  reposts   Repost[]
+  bookmarks Bookmark[]
+  comments  Comment[]
+  reports   Report[]
+
+  @@index([authorId])
+  @@index([fundraiserId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@index([engagementScore])
+  @@map("posts")
+}
+
+model Hashtag {
+  id  String @id @default(uuid())
+  tag String @unique
+
+  posts PostHashtag[]
+
+  usageCount Int      @default(0)
+  lastUsedAt DateTime @default(now())
+
+  @@index([usageCount])
+  @@map("hashtags")
+}
+
+// Join table for efficiency
+model PostHashtag {
+  postId    String
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtagId String
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([postId, hashtagId])
+  @@index([hashtagId])
+  @@map("post_hashtags")
+}
+
+enum PostType {
+  TEXT
+  MEDIA
+  POLL
+  DONATION_EVENT
+  FUNDRAISER_NEW
+  FUNDRAISER_UPDATE
+  MILESTONE_REACHED
+}
+
+enum PostVisibility {
+  PUBLIC
+  FOLLOWERS
+  PRIVATE
+}
+
+model Media {
+  id        String      @id @default(uuid())
+  postId    String
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  type      MediaType
+  mimeType  String?
+  size      Int? // bytes
+  width     Int?
+  height    Int?
+  duration  Int? // seconds for video/audio
+  thumbnail String?
+  alt       String?
+  status    MediaStatus @default(PROCESSING)
+  createdAt DateTime    @default(now())
+
+  @@index([postId])
+  @@map("media")
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  GIF
+}
+
+enum MediaStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Comment {
+  id       String @id @default(uuid())
+  content  String @db.Text
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId   String
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  // Nested comments
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+
+  likesCount Int           @default(0)
+  likes      CommentLike[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  userId    String
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@map("comment_likes")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
+}
+
+model Repost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment   String?  @db.Text // Optional quote repost
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+  @@map("reposts")
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@map("bookmarks")
+}
+
+// ==================== FUNDRAISING ====================
+
+model Fundraiser {
+  id        String @id @default(uuid())
+  onChainId Int    @unique
+  txHash    String @unique
+
+  // Basic Info
+  name        String
+  description String   @db.Text
+  images      String[]
+  categories  String[]
+  region      String?
+
+  // Financials
+  goalAmount   String // BigDecimal as string (USDC)
+  raisedAmount String @default("0")
+  currency     String @default("USDC")
+
+  // Addresses
+  beneficiary     String
+  stakingPoolAddr String?
+
+  // Creator
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Timeline
+  deadline  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Status
+  isActive    Boolean @default(true)
+  isFeatured  Boolean @default(false)
+  goalReached Boolean @default(false)
+
+  // Stats (Denormalized)
+  donorsCount  Int @default(0)
+  stakersCount Int @default(0)
+  updatesCount Int @default(0)
+
+  // Relations
+  donations  Donation[]
+  stakes     Stake[]
+  posts      Post[]
+  updates    FundraiserUpdate[]
+  milestones Milestone[]
+  proposals  Proposal[]
+  votes      Vote[]
+
+  globalVotes GlobalPoolVote[]
+
+  @@index([creatorId])
+  @@index([onChainId])
+  @@index([isActive])
+  @@index([goalReached])
+  @@map("fundraisers")
+}
+
+model FundraiserUpdate {
+  id           String     @id @default(uuid())
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  title        String
+  content      String     @db.Text
+  mediaUrls    String[]
+  createdAt    DateTime   @default(now())
+
+  @@index([fundraiserId])
+  @@map("fundraiser_updates")
+}
+
+model Milestone {
+  id           String     @id @default(uuid())
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  targetAmount String
+  isReached    Boolean    @default(false)
+  reachedAt    DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@index([fundraiserId])
+  @@map("milestones")
+}
+
+model Donation {
+  id     String @id @default(uuid())
+  txHash String @unique
+
+  // Amounts
+  amount    String // Original amount
+  amountUSD String // Converted to USD
+  token     String // Token symbol
+
+  // Blockchain
+  chainId     Int
+  sourceChain String
+  blockNumber Int?
+
+  // Donor
+  donorId      String?
+  donor        User?   @relation(fields: [donorId], references: [id])
+  donorAddress String
+
+  // Fundraiser
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
+  // Metadata
+  isAnonymous Boolean @default(false)
+  message     String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  indexedAt DateTime @default(now())
+
+  @@index([fundraiserId])
+  @@index([donorId])
+  @@index([donorAddress])
+  @@index([txHash])
+  @@map("donations")
+}
+
+model Stake {
+  id          String @id @default(uuid())
+  txHash      String @unique
+  poolAddress String
+  amount      String
+  shares      String // Receipt tokens
+
+  fundraiserId String?
+  fundraiser   Fundraiser? @relation(fields: [fundraiserId], references: [id])
+
+  // Staker
+  stakerId      String
+  staker        User   @relation(fields: [stakerId], references: [id])
+  stakerAddress String
+
+  // Blockchain
+  chainId     Int
+  blockNumber Int?
+
+  // Status
+  isActive Boolean @default(true)
+  isGlobal Boolean @default(false)
+
+  // Timestamps
+  stakedAt   DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  unstakedAt DateTime?
+
+  @@index([stakerId])
+  @@index([fundraiserId])
+  @@index([poolAddress])
+  @@map("stakes")
+}
+
+model Proposal {
+  id           String     @id @default(uuid())
+  onChainId    Int        @unique
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
+  // Content
+  title       String
+  description String @db.Text
+
+  // Creator
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
+
+  // Voting
+  requiredVotes String // BigDecimal as string
+  upvotes       String @default("0")
+  downvotes     String @default("0")
+
+  // Status
+  executed   Boolean   @default(false)
+  executedAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Relations
+  votes Vote[]
+
+  @@index([fundraiserId])
+  @@index([onChainId])
+  @@map("proposals")
+}
+
+model Vote {
+  id           String     @id @default(uuid())
+  proposalId   String
+  proposal     Proposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+  voterId      String
+  voter        User       @relation(fields: [voterId], references: [id])
+  isUpvote     Boolean
+  votingPower  String // Amount of USDC donated
+  createdAt    DateTime   @default(now())
+
+  @@unique([proposalId, voterId])
+  @@index([proposalId])
+  @@map("votes")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id String @id @default(uuid())
+
+  // Recipient
+  recipientId String
+  recipient   User   @relation("recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  // Actor (who triggered the notification)
+  actorId String?
+  actor   User?   @relation("actor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  // Type & Content
+  type    NotificationType
+  title   String?
+  message String?
+
+  // Related entities
+  entityId   String? // Post, Fundraiser, etc.
+  entityType String? // 'post', 'fundraiser', 'donation'
+
+  // Metadata
+  metadata Json?
+
+  // Status
+  read   Boolean   @default(false)
+  readAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([recipientId])
+  @@index([actorId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  REPOST
+  FOLLOW
+  MENTION
+  DONATION_RECEIVED
+  STAKE_RECEIVED
+  GOAL_REACHED
+  MILESTONE_REACHED
+  PROPOSAL_CREATED
+  PROPOSAL_EXECUTED
+  MESSAGE
+  SYSTEM
+}
+
+// ==================== MESSAGING ====================
+
+model Conversation {
+  id            String                    @id @default(uuid())
+  participants  ConversationParticipant[]
+  messages      Message[]
+  lastMessageAt DateTime?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId     String
+  receiver       User         @relation("receiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  content        String       @db.Text
+  mediaUrl       String?
+  read           Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("messages")
+}
+
+// ==================== MODERATION & SAFETY ====================
+
+model Report {
+  id          String       @id @default(uuid())
+  reporterId  String
+  reporter    User         @relation("reporter", fields: [reporterId], references: [id])
+  reportedId  String
+  reported    User         @relation("reported", fields: [reportedId], references: [id])
+  postId      String?
+  post        Post?        @relation(fields: [postId], references: [id])
+  entityId    String? // Post, Comment, etc.
+  entityType  String?
+  reason      ReportReason
+  description String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  createdAt   DateTime     @default(now())
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([postId])
+  @@index([status])
+  @@map("reports")
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  VIOLENCE
+  SCAM
+  FAKE_FUNDRAISER
+  INAPPROPRIATE_CONTENT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+// ==================== ANALYTICS & TRACKING ====================
+
+model ActivityLog {
+  id         String       @id @default(uuid())
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     ActivityType
+  entityId   String?
+  entityType String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime     @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+enum ActivityType {
+  POST_CREATE
+  POST_VIEW
+  POST_LIKE
+  POST_UNLIKE
+  POST_REPOST
+  POST_BOOKMARK
+  COMMENT_CREATE
+  FOLLOW
+  UNFOLLOW
+  DONATION_CREATE
+  STAKE_CREATE
+  PROPOSAL_CREATE
+  VOTE_CAST
+  PROFILE_VIEW
+  FUNDRAISER_VIEW
+  SEARCH
+}
+
+model Trending {
+  id           String   @id @default(uuid())
+  type         String // 'hashtag', 'fundraiser', 'user'
+  value        String // The actual hashtag, fundraiser ID, or user ID
+  score        Float // Trending score
+  postsCount   Int      @default(0)
+  period       String // '1h', '24h', '7d'
+  calculatedAt DateTime @default(now())
+
+  @@unique([type, value, period])
+  @@index([type, period, score])
+  @@map("trending")
+}
+
+// ==================== BLOCKCHAIN SYNC ====================
+
+model BlockchainSync {
+  id              String   @id @default(uuid())
+  chainId         Int
+  chainName       String
+  contractAddress String
+  lastBlock       Int      @default(0)
+  lastSyncAt      DateTime @default(now())
+  status          String   @default("SYNCING") // 'SYNCING', 'SYNCED', 'ERROR'
+  error           String?
+
+  @@unique([chainId, contractAddress])
+  @@map("blockchain_sync")
+}
+
+model NotificationSetting {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Channels
+  emailEnabled Boolean @default(true)
+  pushEnabled  Boolean @default(true)
+
+  // Granular Controls
+  notifyOnLike     Boolean @default(true)
+  notifyOnComment  Boolean @default(true)
+  notifyOnFollow   Boolean @default(true)
+  notifyOnMention  Boolean @default(true)
+  notifyOnDonation Boolean @default(true) // "Someone donated to your fundraiser"
+  notifyOnStake    Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_settings")
+}
+
+model DeviceToken {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token    String @unique // The Firebase/APNS token
+  platform String // 'IOS', 'ANDROID', 'WEB'
+
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model SupportedChain {
+  id          Int    @id
+  name        String
+  rpcUrl      String
+  explorerUrl String
+
+  isActive Boolean          @default(true)
+  tokens   SupportedToken[]
+
+  @@map("supported_chains")
+}
+
+model SupportedToken {
+  id       String @id @default(uuid())
+  symbol   String
+  name     String
+  decimals Int    @default(18)
+
+  chainId Int
+  chain   SupportedChain @relation(fields: [chainId], references: [id])
+
+  address String
+  logoUrl String?
+
+  isActive Boolean @default(true)
+
+  @@unique([chainId, address])
+  @@unique([chainId, symbol])
+  @@map("supported_tokens")
+}
+
+// ==================== GLOBAL POOL & VOTING ====================
+
+model GlobalPoolEpoch {
+  id          String   @id @default(uuid())
+  epochNumber Int      @unique
+  startDate   DateTime
+  endDate     DateTime
+  totalYield  String   @default("0")
+
+  isCalculated  Boolean @default(false)
+  isDistributed Boolean @default(false)
+
+  distributionTx String?
+
+  votes GlobalPoolVote[]
+
+  @@map("global_pool_epochs")
+}
+
+model GlobalPoolVote {
+  id String @id @default(uuid())
+
+  epochId String
+  epoch   GlobalPoolEpoch @relation(fields: [epochId], references: [id])
+
+  voterId String
+  voter   User   @relation(fields: [voterId], references: [id])
+
+  fundraiserId String
+  fundraiser   Fundraiser @relation(fields: [fundraiserId], references: [id])
+
+  weight String
+
+  createdAt DateTime @default(now())
+
+  @@unique([epochId, voterId, fundraiserId])
+  @@index([epochId])
+  @@map("global_pool_votes")
+}
+
+// ==================== HYBRID FBT TOKENOMICS ====================
+
+model GlobalPoolLock {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  amount      String
+  unlockDate  DateTime
+  multiplier  Float
+  votingPower String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("global_pool_locks")
+}
+
+model RewardClaim {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  amount String
+  txHash String @unique
+
+  claimedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("reward_claims")
+}
