@@ -120,8 +120,8 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
               key={goal.id}
               onClick={() => toggleGoal(goal.id)}
               className={`relative flex flex-col gap-3 p-5 rounded-2xl text-left transition-all ${isSelected
-                  ? "bg-gradient-to-br from-purple-900/60 to-purple-800/40 border-2 border-purple-500"
-                  : "bg-[#221a31] border-2 border-transparent hover:border-purple-500/50"
+                  ? "bg-gradient-to-br from-purple-800/50 to-purple-900/40 border border-purple-400/30"
+                  : "bg-gradient-to-br from-[#1a1525] to-[#13101d] border border-white/10 hover:border-purple-400/25"
                 }`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -144,8 +144,8 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
               {/* Icon */}
               <div
                 className={`w-12 h-12 rounded-xl flex items-center justify-center ${isSelected
-                    ? "bg-purple-500/30 text-purple-300"
-                    : "bg-purple-900/30 text-purple-400"
+                    ? "bg-purple-500/25 text-purple-300"
+                    : "bg-purple-900/20 text-purple-400"
                   }`}
               >
                 {goal.icon}
@@ -156,7 +156,7 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
                 <h3 className="text-white font-semibold text-lg">
                   {goal.title}
                 </h3>
-                <p className="text-[#b5b5b5] text-sm leading-relaxed">
+                <p className="text-[#a8a8a8] text-sm leading-relaxed">
                   {goal.description}
                 </p>
               </div>

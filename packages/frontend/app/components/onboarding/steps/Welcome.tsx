@@ -26,10 +26,13 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
     >
       {/* Success animation */}
       <motion.div
-        className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center"
+        className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 rounded-full flex items-center justify-center"
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        style={{
+          background: "linear-gradient(to right, #6f22ac, #9b51e0)",
+        }}
       >
         <PartyPopper className="w-10 h-10 md:w-12 md:h-12 text-white" />
       </motion.div>
@@ -55,9 +58,12 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         )}
         <motion.button
           onClick={handleGoHome}
-          className="py-3 px-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+          className="py-3 px- rounded-lg text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          style={{
+            background: "linear-gradient(97deg, #450CF0 0%, #CD82FF 100%)",
+          }}
         >
           Go to Home
         </motion.button>
@@ -67,4 +73,3 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
 };
 
 export default Welcome;
-

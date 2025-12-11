@@ -7,7 +7,6 @@ import AddReminderModal from "../components/ui/AddReminderModal";
 import ShareCampaignModal from "../components/ui/ShareCampaignModal";
 import { CreatePost } from "../components/ui";
 import ExampleUsage from "../components/ui/CreatePost/CreatePostExample";
-import type { PublishData } from "../components/ui/types/CreatePost.types";
 
 const ThemePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +19,11 @@ const ThemePage = () => {
     // Here you would typically handle the provider selection
   };
 
-  const handlePublish = (data: PublishData) => {
+  const handlePublish = (data: {
+    type: string;
+    content?: string;
+    [key: string]: unknown;
+  }) => {
     console.log("Published data:", data);
     // Here you would typically send the data to your API
     // For example:
@@ -323,11 +326,11 @@ const ThemePage = () => {
       />
 
       {/* CreatePost Popup */}
-      <CreatePost
+      {/* <CreatePost
         isOpen={isCreatePostOpen}
         onClose={() => setIsCreatePostOpen(false)}
         onPublish={handlePublish}
-      />
+      /> */}
 
       {/* ShareCampaignModal */}
       <ShareCampaignModal

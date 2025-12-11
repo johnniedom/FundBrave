@@ -205,7 +205,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
           transition={{ delay: 0.1 }}
         >
           {/* Avatar Circle */}
-          <div className="relative w-[100px] h-[100px] rounded-full bg-gradient-to-br from-purple-900/50 to-purple-800/30 flex items-center justify-center shrink-0 overflow-hidden overflow-x-hidden">
+          <div className="relative w-[100px] h-[100px] rounded-full cursor-pointer bg-gradient-to-br from-purple-900/50 to-purple-800/30 flex items-center justify-center shrink-0 overflow-hidden overflow-x-hidden">
             {avatarPreview ? (
               <>
                 <img
