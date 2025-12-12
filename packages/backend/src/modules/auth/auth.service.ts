@@ -121,21 +121,56 @@ export class AuthService {
 
   // Helper: Generate JWT tokens
   private async generateTokens(userId: string, walletAddress: string) {
+    // Convert duration strings to seconds for type safety with @nestjs/jwt v11+
+    const accessTokenExpiresIn = this.parseJwtDuration(
+      process.env.JWT_EXPIRES_IN || '7d',
+    );
+    const refreshTokenExpiresIn = this.parseJwtDuration(
+      process.env.JWT_REFRESH_EXPIRES_IN || '30d',
+    );
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         { sub: userId, walletAddress },
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+        { expiresIn: accessTokenExpiresIn },
       ),
       this.jwtService.signAsync(
         { sub: userId, walletAddress },
         {
           secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-key',
-          expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
+          expiresIn: refreshTokenExpiresIn,
         },
       ),
     ]);
 
     return { accessToken, refreshToken };
+  }
+
+  /**
+   * Parse JWT duration string to seconds
+   * Supports formats like '7d', '24h', '30m', '60s', or plain numbers (treated as seconds)
+   */
+  private parseJwtDuration(duration: string): number {
+    const match = duration.match(/^(\d+)([dhms]?)$/);
+    if (!match) {
+      // If parsing fails, default to 7 days
+      return 7 * 24 * 60 * 60;
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2] || 's';
+
+    switch (unit) {
+      case 'd':
+        return value * 24 * 60 * 60;
+      case 'h':
+        return value * 60 * 60;
+      case 'm':
+        return value * 60;
+      case 's':
+      default:
+        return value;
+    }
   }
 
   // Helper: Encrypt private key for managed wallets

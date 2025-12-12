@@ -691,12 +691,12 @@ export class UsersService {
       followingCount: user.followingCount,
       postsCount: user.postsCount,
       fundraisersCount: user.fundraisersCount,
-      totalDonated: user.totalDonated,
-      totalStaked: user.totalStaked,
-      fbtBalance: user.fbtBalance,
-      fbtStakedBalance: user.fbtStakedBalance,
-      fbtVestedTotal: user.fbtVestedTotal,
-      fbtVestedClaimed: user.fbtVestedClaimed,
+      totalDonated: user.totalDonated.toString(),
+      totalStaked: user.totalStaked.toString(),
+      fbtBalance: user.fbtBalance.toString(),
+      fbtStakedBalance: user.fbtStakedBalance.toString(),
+      fbtVestedTotal: user.fbtVestedTotal.toString(),
+      fbtVestedClaimed: user.fbtVestedClaimed.toString(),
       reputationScore: user.reputationScore,
     };
 

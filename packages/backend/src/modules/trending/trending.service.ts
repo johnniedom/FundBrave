@@ -116,7 +116,7 @@ export class TrendingService {
           description: f.description ?? undefined,
           images: f.images,
           goalAmount: f.goalAmount,
-          raisedAmount: f.raisedAmount,
+          raisedAmount: f.raisedAmount.toString(),
           donorsCount: f.donorsCount,
           score: t.score,
           period: period,

@@ -74,68 +74,33 @@ export class BlockchainIndexerService implements OnModuleInit {
    * Initialize blockchain providers for each supported chain
    */
   private async initializeProviders(): Promise<void> {
-    // Ethereum Mainnet
-    if (process.env.ETHEREUM_RPC) {
-      this.providers.set(
-        ChainId.ETHEREUM,
-        new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC),
-      );
-    }
+    const providerConfigs = [
+      { chainId: ChainId.ETHEREUM, rpc: process.env.ETHEREUM_RPC, name: 'Ethereum Mainnet' },
+      { chainId: ChainId.SEPOLIA, rpc: process.env.SEPOLIA_RPC, name: 'Sepolia Testnet' },
+      { chainId: ChainId.POLYGON, rpc: process.env.POLYGON_RPC, name: 'Polygon Mainnet' },
+      { chainId: ChainId.MUMBAI, rpc: process.env.MUMBAI_RPC, name: 'Mumbai Testnet' },
+      { chainId: ChainId.AVALANCHE, rpc: process.env.AVALANCHE_RPC, name: 'Avalanche Mainnet' },
+      { chainId: ChainId.FUJI, rpc: process.env.FUJI_RPC, name: 'Fuji Testnet' },
+      { chainId: ChainId.ARBITRUM, rpc: process.env.ARBITRUM_RPC, name: 'Arbitrum Mainnet' },
+      { chainId: ChainId.OPTIMISM, rpc: process.env.OPTIMISM_RPC, name: 'Optimism Mainnet' },
+    ];
 
-    // Ethereum Sepolia Testnet
-    if (process.env.SEPOLIA_RPC) {
-      this.providers.set(
-        ChainId.SEPOLIA,
-        new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC),
-      );
-    }
+    for (const { chainId, rpc, name } of providerConfigs) {
+      // Skip if RPC URL is not configured or contains placeholder
+      if (!rpc || rpc.includes('<KEY>') || rpc.includes('<') || rpc.includes('>')) {
+        this.logger.warn(`Skipping ${name} - RPC URL not configured or contains placeholder`);
+        continue;
+      }
 
-    // Polygon Mainnet
-    if (process.env.POLYGON_RPC) {
-      this.providers.set(
-        ChainId.POLYGON,
-        new ethers.JsonRpcProvider(process.env.POLYGON_RPC),
-      );
-    }
-
-    // Polygon Mumbai Testnet
-    if (process.env.MUMBAI_RPC) {
-      this.providers.set(
-        ChainId.MUMBAI,
-        new ethers.JsonRpcProvider(process.env.MUMBAI_RPC),
-      );
-    }
-
-    // Avalanche Mainnet
-    if (process.env.AVALANCHE_RPC) {
-      this.providers.set(
-        ChainId.AVALANCHE,
-        new ethers.JsonRpcProvider(process.env.AVALANCHE_RPC),
-      );
-    }
-
-    // Avalanche Fuji Testnet
-    if (process.env.FUJI_RPC) {
-      this.providers.set(
-        ChainId.FUJI,
-        new ethers.JsonRpcProvider(process.env.FUJI_RPC),
-      );
-    }
-
-    // Arbitrum Mainnet
-    if (process.env.ARBITRUM_RPC) {
-      this.providers.set(
-        ChainId.ARBITRUM,
-        new ethers.JsonRpcProvider(process.env.ARBITRUM_RPC),
-      );
-    }
-
-    // Optimism Mainnet
-    if (process.env.OPTIMISM_RPC) {
-      this.providers.set(
-        ChainId.OPTIMISM,
-        new ethers.JsonRpcProvider(process.env.OPTIMISM_RPC),
-      );
+      try {
+        const provider = new ethers.JsonRpcProvider(rpc);
+        // Test connection by getting network
+        await provider.getNetwork();
+        this.providers.set(chainId, provider);
+        this.logger.log(`✓ Connected to ${name}`);
+      } catch (error) {
+        this.logger.warn(`✗ Failed to connect to ${name}: ${error.message}`);
+      }
     }
 
     this.logger.log(`Initialized ${this.providers.size} blockchain providers`);
@@ -250,6 +215,12 @@ export class BlockchainIndexerService implements OnModuleInit {
     events: string[],
     startBlock: number = 0,
   ): Promise<void> {
+    // Skip if contract address is not configured (zero address)
+    if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
+      this.logger.warn(`Skipping ${contractName} on chain ${chainId} - contract address not configured`);
+      return;
+    }
+
     this.logger.log(`Indexing ${contractName} at ${contractAddress} on chain ${chainId}`);
 
     // Get last synced block from database
@@ -304,7 +275,7 @@ export class BlockchainIndexerService implements OnModuleInit {
     fromBlock: number,
     toBlock: number,
   ): Promise<void> {
-    const BATCH_SIZE = 10000; // Process 10k blocks at a time
+    const BATCH_SIZE = 1000; // Process 1k blocks at a time (RPC limit is 2048)
     let currentBlock = fromBlock;
 
     while (currentBlock <= toBlock) {

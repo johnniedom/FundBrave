@@ -7,7 +7,7 @@ import {
   Comment,
   PaginatedComments,
   Feed,
-  TrendingHashtag,
+  SocialTrendingHashtag,
   CreatePostInput,
   UpdatePostInput,
   CreateCommentInput,
@@ -97,10 +97,10 @@ export class SocialResolver {
     return this.socialService.getUserBookmarks(user.id, limit, offset);
   }
 
-  @Query(() => [TrendingHashtag], { name: 'trendingHashtags' })
+  @Query(() => [SocialTrendingHashtag], { name: 'trendingHashtags' })
   async getTrendingHashtags(
     @Args('limit', { type: () => Int, defaultValue: 10 }) limit: number,
-  ): Promise<TrendingHashtag[]> {
+  ): Promise<SocialTrendingHashtag[]> {
     return this.socialService.getTrendingHashtags(limit);
   }
 

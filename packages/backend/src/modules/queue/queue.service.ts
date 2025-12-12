@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue, Job } from 'bull';
+import type { Queue, Job } from 'bull';
 
 // Queue names
 export const QUEUE_NAMES = {

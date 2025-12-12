@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, Post as PrismaPost, Comment as PrismaComment } from '@prisma/client';
+import { Prisma, Post as PrismaPost, Comment as PrismaComment, MediaType } from '@prisma/client';
 import {
   Post,
   PostAuthor,
@@ -10,7 +10,7 @@ import {
   Comment,
   PaginatedComments,
   Feed,
-  TrendingHashtag,
+  SocialTrendingHashtag,
   EngagementStats,
   CreatePostInput,
   UpdatePostInput,
@@ -938,7 +938,7 @@ export class SocialService {
   /**
    * Get trending hashtags
    */
-  async getTrendingHashtags(limit: number = 10): Promise<TrendingHashtag[]> {
+  async getTrendingHashtags(limit: number = 10): Promise<SocialTrendingHashtag[]> {
     const hashtags = await this.prisma.hashtag.findMany({
       orderBy: [{ usageCount: 'desc' }, { lastUsedAt: 'desc' }],
       take: limit,
@@ -1034,20 +1034,20 @@ export class SocialService {
   /**
    * Detect media type from URL
    */
-  private detectMediaType(url: string): string {
+  private detectMediaType(url: string): MediaType {
     const extension = url.split('.').pop()?.toLowerCase();
 
     if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
-      return 'IMAGE';
+      return MediaType.IMAGE;
     }
     if (['mp4', 'webm', 'mov'].includes(extension || '')) {
-      return 'VIDEO';
+      return MediaType.VIDEO;
     }
     if (['mp3', 'wav', 'ogg'].includes(extension || '')) {
-      return 'AUDIO';
+      return MediaType.AUDIO;
     }
 
-    return 'IMAGE'; // Default
+    return MediaType.IMAGE; // Default
   }
 
   /**
@@ -1083,7 +1083,7 @@ export class SocialService {
           name: post.fundraiser.name,
           images: post.fundraiser.images,
           goalAmount: post.fundraiser.goalAmount,
-          raisedAmount: post.fundraiser.raisedAmount,
+          raisedAmount: post.fundraiser.raisedAmount.toString(),
         }
       : undefined;
 

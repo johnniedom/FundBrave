@@ -35,10 +35,11 @@ export class SetYieldSplitInput {
 }
 
 /**
- * Input for recording a stake event
+ * Input for recording an Impact DAO stake event (simpler version for tx hash tracking)
+ * For full stake recording, use RecordStakeInput from staking module
  */
 @InputType()
-export class RecordStakeInput {
+export class ImpactDAORecordStakeInput {
   @Field()
   @IsString()
   txHash: string;

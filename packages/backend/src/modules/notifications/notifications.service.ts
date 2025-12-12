@@ -193,7 +193,7 @@ export class NotificationsService {
         message: message || this.getDefaultMessage(type),
         entityId,
         entityType,
-        metadata: metadata || undefined,
+        metadata: (metadata as Prisma.InputJsonValue) || undefined,
       },
       include: {
         actor: {
