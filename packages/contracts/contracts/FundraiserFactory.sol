@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./interfaces/ISwapAdapter.sol";
+import "./libraries/FundraiserFactoryLib.sol";
 
 import { Fundraiser } from "./Fundraiser.sol";
 import { StakingPool } from "./StakingPool.sol";
@@ -40,17 +41,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant VERIFIED_CREATOR_ROLE = keccak256("VERIFIED_CREATOR_ROLE");
     using SafeERC20 for IERC20;
     using Clones for address;
+    using FundraiserFactoryLib for Fundraiser[];
 
     // ============ Custom Errors ============
 
-    /// @notice Thrown when an invalid fundraiser ID is provided
     error InvalidFundraiserId();
-
-    /// @notice Thrown when amount is zero or invalid
     error InvalidAmount();
-
-    /// @notice Thrown when address is zero
     error ZeroAddress();
+    error WorldIDAlreadyUsed();
+    error InvalidStakingPoolType();
+    error AaveNotConfigured();
+    error MorphoNotConfigured();
+    error NoStakingPool();
+    error WealthBuildingNotConfigured();
 
 
     // ============ Implementations for Clones ============
@@ -148,6 +151,10 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     /// @notice Emitted when PlatformTreasury contract is updated
     event PlatformTreasuryUpdated(address indexed newAddress);
 
+    // ============ Custom Error for Constructor ============
+    error InvalidImplementation();
+    error NotBridge();
+
     // ============ Constructor ============
 
     constructor(
@@ -165,8 +172,8 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         string memory _appId,
         string memory _actionId
     ) {
-        require(_fundraiserImplementation != address(0), "Invalid impl");
-        require(_stakingPoolImplementation != address(0), "Invalid impl");
+        if (_fundraiserImplementation == address(0)) revert InvalidImplementation();
+        if (_stakingPoolImplementation == address(0)) revert InvalidImplementation();
 
         fundraiserImplementation = _fundraiserImplementation;
         stakingPoolImplementation = _stakingPoolImplementation;
@@ -182,12 +189,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         stakingPoolType = _stakingPoolType;
 
         worldId = IWorldID(_worldId);
-        appId = uint256(keccak256(abi.encodePacked(_appId))) % 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-        actionId = uint256(keccak256(abi.encodePacked(_actionId))) % 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        // BN254 field prime modulus for World ID
+        uint256 SNARK_SCALAR_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+        appId = uint256(keccak256(abi.encodePacked(_appId))) % SNARK_SCALAR_FIELD;
+        actionId = uint256(keccak256(abi.encodePacked(_actionId))) % SNARK_SCALAR_FIELD;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ADMIN_ROLE, msg.sender);
 
+        _initDefaultCategories();
+    }
+
+    /// @dev Initializes default categories to reduce constructor bytecode
+    function _initDefaultCategories() private {
         _addCategory("Medical");
         _addCategory("Education");
         _addCategory("Emergency");
@@ -201,7 +215,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     // ============ Modifiers ============
 
     modifier onlyBridge() {
-        require(msg.sender == fundBraveBridge, "Factory: Caller is not the bridge");
+        if (msg.sender != fundBraveBridge) revert NotBridge();
         _;
     }
 
@@ -221,7 +235,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      * @param _fbt Address of the FundBraveToken contract
      */
     function setFBT(address _fbt) external onlyRole(ADMIN_ROLE) {
-        require(_fbt != address(0), "Invalid FBT address");
+        if (_fbt == address(0)) revert ZeroAddress();
         fbtToken = _fbt;
         emit FBTUpdated(_fbt);
     }
@@ -271,7 +285,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      * @param root World ID merkle root
      * @param nullifierHash World ID nullifier hash
      * @param proof World ID ZK proof
-     * @return Address of the created fundraiser
+     * @return fundraiserAddress Address of the created fundraiser
      */
     function createFundraiser(
         string memory name,
@@ -285,9 +299,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         uint256 root,
         uint256 nullifierHash,
         uint256[8] calldata proof
-    ) external nonReentrant whenNotPaused returns (address) {
+    ) external nonReentrant whenNotPaused returns (address fundraiserAddress) {
         if (address(worldId) != address(0)) {
-            if (nullifierHashes[nullifierHash]) revert("WorldID: Already used");
+            if (nullifierHashes[nullifierHash]) revert WorldIDAlreadyUsed();
             worldId.verifyProof(
                 root,
                 1,
@@ -300,49 +314,10 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         }
 
         _validateFundraiserParams(name, images, categories, description, beneficiary, goal, durationInDays);
-        uint256 deadline = block.timestamp + (durationInDays * 1 days);
 
-        // Clone deployment for Fundraiser
-        address clone = fundraiserImplementation.clone();
-
-        // Determine fee recipient: use platformTreasury if set, otherwise fallback
-        address feeRecipient = address(platformTreasury) != address(0)
-            ? address(platformTreasury)
-            : platformFeeRecipient;
-
-        Fundraiser(clone).initialize(
-            currentId,
-            name,
-            images,
-            categories,
-            description,
-            region,
-            beneficiary,
-            msg.sender,
-            goal,
-            deadline,
-            USDC,
-            feeRecipient,
-            address(this)
+        fundraiserAddress = _createFundraiserInternal(
+            name, images, categories, description, region, beneficiary, goal, durationInDays
         );
-
-        Fundraiser fundraiser = Fundraiser(clone);
-        _fundraisers.push(fundraiser);
-        _fundraisersByOwner[msg.sender].push(fundraiser);
-
-        // Deploy staking pool for the fundraiser
-        address poolAddress = _deployStakingPool(beneficiary);
-        stakingPools[currentId] = poolAddress;
-        activeFundraisers[currentId] = true;
-
-        totalFundraisersCreated++;
-        activeFundraiserCount++;
-
-        emit FundraiserCreated(address(fundraiser), msg.sender, currentId, name, goal, deadline);
-        emit StakingPoolCreated(currentId, poolAddress);
-
-        currentId++;
-        return address(fundraiser);
     }
 
     /**
@@ -359,33 +334,36 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         uint256 goal,
         uint256 durationInDays
     ) external onlyRole(VERIFIED_CREATOR_ROLE) nonReentrant whenNotPaused returns (address) {
-        require(bytes(name).length > 0, "Invalid name");
-        require(beneficiary != address(0), "Invalid beneficiary");
-        require(goal > 0, "Goal must be > 0");
+        if (bytes(name).length == 0) revert FundraiserFactoryLib.InvalidNameLength();
+        if (beneficiary == address(0)) revert FundraiserFactoryLib.InvalidBeneficiary();
+        if (goal == 0) revert InvalidAmount();
 
+        return _createFundraiserInternal(
+            name, images, categories, description, region, beneficiary, goal, durationInDays
+        );
+    }
+
+    /// @dev Internal function to create and register a fundraiser
+    function _createFundraiserInternal(
+        string memory name,
+        string[] memory images,
+        string[] memory categories,
+        string memory description,
+        string memory region,
+        address payable beneficiary,
+        uint256 goal,
+        uint256 durationInDays
+    ) internal returns (address) {
         uint256 deadline = block.timestamp + (durationInDays * 1 days);
-
         address clone = fundraiserImplementation.clone();
 
-        // Determine fee recipient: use platformTreasury if set, otherwise fallback
         address feeRecipient = address(platformTreasury) != address(0)
             ? address(platformTreasury)
             : platformFeeRecipient;
 
         Fundraiser(clone).initialize(
-            currentId,
-            name,
-            images,
-            categories,
-            description,
-            region,
-            beneficiary,
-            msg.sender,
-            goal,
-            deadline,
-            USDC,
-            feeRecipient,
-            address(this)
+            currentId, name, images, categories, description, region,
+            beneficiary, msg.sender, goal, deadline, USDC, feeRecipient, address(this)
         );
 
         Fundraiser fundraiser = Fundraiser(clone);
@@ -396,14 +374,16 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         stakingPools[currentId] = poolAddress;
         activeFundraisers[currentId] = true;
 
-        totalFundraisersCreated++;
-        activeFundraiserCount++;
+        unchecked {
+            totalFundraisersCreated++;
+            activeFundraiserCount++;
+        }
 
-        emit FundraiserCreated(address(fundraiser), msg.sender, currentId, name, goal, deadline);
+        emit FundraiserCreated(clone, msg.sender, currentId, name, goal, deadline);
         emit StakingPoolCreated(currentId, poolAddress);
 
-        currentId++;
-        return address(fundraiser);
+        unchecked { currentId++; }
+        return clone;
     }
 
     // ============ Internal Functions ============
@@ -417,16 +397,20 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         uint256 goal,
         uint256 durationInDays
     ) internal view {
-        require(bytes(name).length > 0 && bytes(name).length <= 100, "Invalid name length");
-        require(images.length > 0 && images.length <= 10, "Invalid number of images");
-        require(categories.length > 0 && categories.length <= 5, "Invalid number of categories");
-        require(bytes(description).length > 0 && bytes(description).length <= 5000, "Invalid description length");
-        require(beneficiary != address(0), "Invalid beneficiary");
-        require(goal >= minGoal && goal <= maxGoal, "Goal outside allowed range");
-        require(durationInDays >= minDuration / 1 days && durationInDays <= maxDuration / 1 days, "Duration outside allowed range");
-        for (uint256 i = 0; i < categories.length; i++) {
-            require(_categoryExists[categories[i]], "Invalid category");
-        }
+        FundraiserFactoryLib.validateFundraiserParams(
+            name,
+            images,
+            categories,
+            description,
+            beneficiary,
+            goal,
+            durationInDays,
+            minGoal,
+            maxGoal,
+            minDuration / 1 days,
+            maxDuration / 1 days,
+            _categoryExists
+        );
     }
 
     /**
@@ -436,14 +420,12 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      * @return Address of the deployed staking pool
      */
     function _deployStakingPool(address beneficiary) internal returns (address) {
-        // Determine fee recipient: use platformTreasury if set, otherwise fallback
         address feeRecipient = address(platformTreasury) != address(0)
             ? address(platformTreasury)
             : platformFeeRecipient;
 
         if (stakingPoolType == 0) {
-            // Clone deployment for Aave StakingPool
-            require(AAVE_POOL != address(0), "Factory: Aave not configured");
+            if (AAVE_POOL == address(0)) revert AaveNotConfigured();
             address pool = stakingPoolImplementation.clone();
             StakingPool(pool).initialize(
                 AAVE_POOL,
@@ -458,9 +440,8 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
             );
             return pool;
         } else if (stakingPoolType == 1) {
-            // Standard deployment for Morpho
-            require(MORPHO_VAULT != address(0), "Factory: Morpho not configured");
-            MorphoStakingPool pool = new MorphoStakingPool(
+            if (MORPHO_VAULT == address(0)) revert MorphoNotConfigured();
+            return address(new MorphoStakingPool(
                 MORPHO_VAULT,
                 USDC,
                 fbtToken,
@@ -468,10 +449,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
                 feeRecipient,
                 address(this),
                 msg.sender
-            );
-            return address(pool);
+            ));
         } else {
-            revert("Factory: Invalid staking pool type");
+            revert InvalidStakingPoolType();
         }
     }
 
@@ -482,16 +462,12 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      * @param fundraiserId ID of the fundraiser to stake in
      */
     function stakeNative(uint256 fundraiserId) external payable nonReentrant whenNotPaused {
-        require(msg.value > 0, "Value must be > 0");
+        if (msg.value == 0) revert InvalidAmount();
         address poolAddress = stakingPools[fundraiserId];
-        require(poolAddress != address(0), "No staking pool");
+        if (poolAddress == address(0)) revert NoStakingPool();
         uint256 usdcAmount = _swapNativeToUSDC(msg.value);
         IERC20(USDC).safeTransfer(poolAddress, usdcAmount);
-        if (stakingPoolType == 0) {
-            StakingPool(poolAddress).depositFor(msg.sender, usdcAmount);
-        } else {
-            MorphoStakingPool(poolAddress).depositFor(msg.sender, usdcAmount);
-        }
+        _depositToPool(poolAddress, msg.sender, usdcAmount);
     }
 
     /**
@@ -502,14 +478,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      */
     function stakeERC20(uint256 fundraiserId, address token, uint256 amount) external nonReentrant whenNotPaused {
         address poolAddress = stakingPools[fundraiserId];
-        require(poolAddress != address(0), "No staking pool");
+        if (poolAddress == address(0)) revert NoStakingPool();
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         uint256 usdcAmount = _swapToUSDC(token, amount);
         IERC20(USDC).safeTransfer(poolAddress, usdcAmount);
+        _depositToPool(poolAddress, msg.sender, usdcAmount);
+    }
+
+    /// @dev Internal helper to deposit to appropriate staking pool type
+    function _depositToPool(address poolAddress, address depositor, uint256 amount) internal {
         if (stakingPoolType == 0) {
-            StakingPool(poolAddress).depositFor(msg.sender, usdcAmount);
+            StakingPool(poolAddress).depositFor(depositor, amount);
         } else {
-            MorphoStakingPool(poolAddress).depositFor(msg.sender, usdcAmount);
+            MorphoStakingPool(poolAddress).depositFor(depositor, amount);
         }
     }
 
@@ -517,11 +498,10 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
 
     /**
      * @notice Donates native currency (ETH) to a fundraiser
-     * @dev 100% goes directly to the fundraiser (minus any platform fees in Fundraiser contract)
      * @param fundraiserId ID of the fundraiser to donate to
      */
     function donateNative(uint256 fundraiserId) external payable nonReentrant whenNotPaused {
-        require(fundraiserId < _fundraisers.length, "Invalid ID");
+        if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
         Fundraiser fundraiser = _fundraisers[fundraiserId];
         uint256 usdcAmount = _swapNativeToUSDC(msg.value);
         IERC20(USDC).safeTransfer(address(fundraiser), usdcAmount);
@@ -531,14 +511,13 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
 
     /**
      * @notice Donates ERC20 tokens to a fundraiser
-     * @dev 100% goes directly to the fundraiser (minus any platform fees in Fundraiser contract)
      * @param fundraiserId ID of the fundraiser to donate to
      * @param token Address of the ERC20 token to donate
      * @param amount Amount of tokens to donate
      */
     function donateERC20(uint256 fundraiserId, address token, uint256 amount) external nonReentrant whenNotPaused {
-        require(amount > 0, "Factory: Amount must be > 0");
-        require(fundraiserId < _fundraisers.length, "Factory: Invalid fundraiser ID");
+        if (amount == 0) revert InvalidAmount();
+        if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
         Fundraiser fundraiser = _fundraisers[fundraiserId];
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         uint256 usdcAmount = _swapToUSDC(token, amount);
@@ -551,7 +530,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
 
     /**
      * @notice Make a Wealth-Building donation (80% direct, 20% endowed)
-     * @dev Requires WealthBuildingDonation contract to be configured
      * @param fundraiserId The fundraiser to donate to
      * @param amount USDC amount to donate
      */
@@ -562,28 +540,21 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     {
         if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
         if (amount == 0) revert InvalidAmount();
-        require(address(wealthBuildingDonation) != address(0), "WealthBuilding not configured");
+        if (address(wealthBuildingDonation) == address(0)) revert WealthBuildingNotConfigured();
 
         Fundraiser fundraiser = _fundraisers[fundraiserId];
-        address beneficiary = fundraiser.beneficiary();
 
-        // Transfer USDC from donor to this contract
         IERC20(USDC).safeTransferFrom(msg.sender, address(this), amount);
-
-        // Approve WealthBuildingDonation to spend
         IERC20(USDC).forceApprove(address(wealthBuildingDonation), amount);
 
-        // Call WealthBuildingDonation.donate()
         (uint256 directAmount, uint256 endowmentAmount) = wealthBuildingDonation.donate(
             msg.sender,
             fundraiserId,
             amount,
-            beneficiary
+            fundraiser.beneficiary()
         );
 
-        // Credit the direct donation to the fundraiser
         fundraiser.creditDonation(msg.sender, directAmount, "wealth-building");
-
         totalFundsRaised += amount;
 
         emit WealthBuildingDonationMade(msg.sender, fundraiserId, amount, directAmount, endowmentAmount);
@@ -591,7 +562,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
 
     /**
      * @notice Make a Wealth-Building donation using any ERC20 token
-     * @dev Swaps token to USDC first, then processes as wealth-building donation
      * @param fundraiserId The fundraiser to donate to
      * @param token Address of the ERC20 token to donate
      * @param amount Amount of tokens to donate
@@ -603,22 +573,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     ) external nonReentrant whenNotPaused {
         if (amount == 0) revert InvalidAmount();
         if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
-        require(address(wealthBuildingDonation) != address(0), "WealthBuilding not configured");
+        if (address(wealthBuildingDonation) == address(0)) revert WealthBuildingNotConfigured();
 
         Fundraiser fundraiser = _fundraisers[fundraiserId];
-        address beneficiary = fundraiser.beneficiary();
 
-        // Transfer token and swap to USDC
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         uint256 usdcAmount = _swapToUSDC(token, amount);
 
-        // Approve and donate via WealthBuildingDonation
         IERC20(USDC).forceApprove(address(wealthBuildingDonation), usdcAmount);
         (uint256 directAmount, uint256 endowmentAmount) = wealthBuildingDonation.donate(
             msg.sender,
             fundraiserId,
             usdcAmount,
-            beneficiary
+            fundraiser.beneficiary()
         );
 
         fundraiser.creditDonation(msg.sender, directAmount, "wealth-building-erc20");
@@ -629,7 +596,6 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
 
     /**
      * @notice Make a Wealth-Building donation using native currency (ETH)
-     * @dev Swaps ETH to USDC first, then processes as wealth-building donation
      * @param fundraiserId The fundraiser to donate to
      */
     function donateWealthBuildingNative(uint256 fundraiserId)
@@ -638,23 +604,19 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
         nonReentrant
         whenNotPaused
     {
-        require(msg.value > 0, "Value must be > 0");
+        if (msg.value == 0) revert InvalidAmount();
         if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
-        require(address(wealthBuildingDonation) != address(0), "WealthBuilding not configured");
+        if (address(wealthBuildingDonation) == address(0)) revert WealthBuildingNotConfigured();
 
         Fundraiser fundraiser = _fundraisers[fundraiserId];
-        address beneficiary = fundraiser.beneficiary();
-
-        // Swap ETH to USDC
         uint256 usdcAmount = _swapNativeToUSDC(msg.value);
 
-        // Approve and donate via WealthBuildingDonation
         IERC20(USDC).forceApprove(address(wealthBuildingDonation), usdcAmount);
         (uint256 directAmount, uint256 endowmentAmount) = wealthBuildingDonation.donate(
             msg.sender,
             fundraiserId,
             usdcAmount,
-            beneficiary
+            fundraiser.beneficiary()
         );
 
         fundraiser.creditDonation(msg.sender, directAmount, "wealth-building-native");
@@ -690,7 +652,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      * @dev Only callable by the configured bridge contract
      */
     function handleCrossChainDonation(address donor, uint256 fundraiserId, uint256 usdcAmount) external nonReentrant whenNotPaused onlyBridge {
-        require(fundraiserId < _fundraisers.length, "Factory: Invalid fundraiser ID");
+        if (fundraiserId >= _fundraisers.length) revert InvalidFundraiserId();
         Fundraiser fundraiser = _fundraisers[fundraiserId];
         IERC20(USDC).safeTransfer(address(fundraiser), usdcAmount);
         fundraiser.creditDonation(donor, usdcAmount, "cross-chain");
@@ -703,13 +665,9 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
      */
     function handleCrossChainStake(address donor, uint256 fundraiserId, uint256 usdcAmount) external nonReentrant whenNotPaused onlyBridge {
         address poolAddress = stakingPools[fundraiserId];
-        require(poolAddress != address(0), "No staking pool");
+        if (poolAddress == address(0)) revert NoStakingPool();
         IERC20(USDC).safeTransfer(poolAddress, usdcAmount);
-        if (stakingPoolType == 0) {
-            StakingPool(poolAddress).depositFor(donor, usdcAmount);
-        } else {
-            MorphoStakingPool(poolAddress).depositFor(donor, usdcAmount);
-        }
+        _depositToPool(poolAddress, donor, usdcAmount);
     }
 
     // ============ Internal Swap Functions ============
@@ -729,121 +687,104 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     function fundraisersCount() public view returns (uint256) { return _fundraisers.length; }
 
     function fundraisers(uint256 limit, uint256 offset) external view returns (Fundraiser[] memory coll) {
-        require(offset <= fundraisersCount(), "Offset out of bounds");
-        uint256 size = fundraisersCount() - offset;
-        size = size < limit ? size : limit;
-        size = size < MAX_LIMIT ? size : MAX_LIMIT;
+        uint256 size = FundraiserFactoryLib.calculatePageSize(_fundraisers.length, offset, limit, MAX_LIMIT);
         coll = new Fundraiser[](size);
-        for (uint256 i = 0; i < size; i++) { coll[i] = _fundraisers[offset + i]; }
-        return coll;
+        for (uint256 i = 0; i < size;) {
+            coll[i] = _fundraisers[offset + i];
+            unchecked { ++i; }
+        }
     }
 
     function fundraisersByOwner(address owner) external view returns (Fundraiser[] memory) { return _fundraisersByOwner[owner]; }
 
     function _activeFundraisers() external view returns (Fundraiser[] memory) {
-        uint256 activeCount = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) { if (activeFundraisers[i]) { activeCount++; } }
-        Fundraiser[] memory active = new Fundraiser[](activeCount);
-        uint256 currentIndex = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) {
-            if (activeFundraisers[i]) { active[currentIndex] = _fundraisers[i]; currentIndex++; }
-        }
-        return active;
+        uint256 activeCount = _fundraisers.countActive(activeFundraisers);
+        return _fundraisers.getActive(activeFundraisers, activeCount);
     }
 
     function getFundraiserById(uint256 id) external view returns (Fundraiser) {
-        require(id < _fundraisers.length, "Fundraiser does not exist");
+        if (id >= _fundraisers.length) revert InvalidFundraiserId();
         return _fundraisers[id];
     }
 
     function searchFundraisersByCategory(string memory category) external view returns (Fundraiser[] memory) {
-        require(_categoryExists[category], "Category does not exist");
-        uint256 count = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) {
-            string[] memory cats = _fundraisers[i].getCategories();
-            for (uint256 j = 0; j < cats.length; j++) {
-                if (keccak256(bytes(cats[j])) == keccak256(bytes(category))) { count++; break; }
-            }
-        }
-        Fundraiser[] memory results = new Fundraiser[](count);
-        uint256 currentIndex = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) {
-            string[] memory cats = _fundraisers[i].getCategories();
-            for (uint256 j = 0; j < cats.length; j++) {
-                if (keccak256(bytes(cats[j])) == keccak256(bytes(category))) { results[currentIndex] = _fundraisers[i]; currentIndex++; break; }
-            }
-        }
-        return results;
+        if (!_categoryExists[category]) revert FundraiserFactoryLib.CategoryDoesNotExist();
+        uint256 count = _fundraisers.countByCategory(category);
+        return _fundraisers.findByCategory(category, count);
     }
 
     function searchFundraisersByRegion(string memory region) external view returns (Fundraiser[] memory) {
-        uint256 count = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) {
-            if (keccak256(bytes(_fundraisers[i].region())) == keccak256(bytes(region))) { count++; }
-        }
-        Fundraiser[] memory results = new Fundraiser[](count);
-        uint256 currentIndex = 0;
-        for (uint256 i = 0; i < _fundraisers.length; i++) {
-            if (keccak256(bytes(_fundraisers[i].region())) == keccak256(bytes(region))) { results[currentIndex] = _fundraisers[i]; currentIndex++; }
-        }
-        return results;
+        uint256 count = _fundraisers.countByRegion(region);
+        return _fundraisers.findByRegion(region, count);
     }
 
     function getAvailableCategories() external view returns (string[] memory) { return availableCategories; }
-    function getPlatformStats() external view returns (uint256 _totalFundraisersCreated, uint256 _activeFundraiserCount, uint256 _totalFundsRaised) { return (totalFundraisersCreated, activeFundraiserCount, totalFundsRaised); }
+
+    function getPlatformStats() external view returns (uint256, uint256, uint256) {
+        return (totalFundraisersCreated, activeFundraiserCount, totalFundsRaised);
+    }
 
     // ============ Admin Functions ============
+
+    error CategoryAlreadyExists();
+    error InvalidCategoryLength();
+    error AlreadyVerified();
+    error NotVerified();
+    error AlreadyInactive();
+    error InvalidGoalParams();
+    error InvalidDurationParams();
 
     function addCategory(string memory category) external onlyRole(ADMIN_ROLE) { _addCategory(category); }
 
     function _addCategory(string memory category) private {
-        require(!_categoryExists[category], "Category already exists");
-        require(bytes(category).length > 0 && bytes(category).length <= 50, "Invalid category length");
+        if (_categoryExists[category]) revert CategoryAlreadyExists();
+        uint256 len = bytes(category).length;
+        if (len == 0 || len > 50) revert InvalidCategoryLength();
         availableCategories.push(category);
         _categoryExists[category] = true;
         emit CategoryAdded(category);
     }
 
     function verifyCreator(address creator) external onlyRole(ADMIN_ROLE) {
-        require(!verifiedCreators[creator], "Already verified");
+        if (verifiedCreators[creator]) revert AlreadyVerified();
         verifiedCreators[creator] = true;
         _grantRole(VERIFIED_CREATOR_ROLE, creator);
         emit CreatorVerified(creator);
     }
 
     function unverifyCreator(address creator) external onlyRole(ADMIN_ROLE) {
-        require(verifiedCreators[creator], "Not verified");
+        if (!verifiedCreators[creator]) revert NotVerified();
         verifiedCreators[creator] = false;
         _revokeRole(VERIFIED_CREATOR_ROLE, creator);
         emit CreatorUnverified(creator);
     }
 
     function deactivateFundraiser(uint256 id) external onlyRole(ADMIN_ROLE) {
-        require(id < _fundraisers.length, "Fundraiser does not exist");
-        require(activeFundraisers[id], "Already inactive");
+        if (id >= _fundraisers.length) revert InvalidFundraiserId();
+        if (!activeFundraisers[id]) revert AlreadyInactive();
         activeFundraisers[id] = false;
-        activeFundraiserCount--;
+        unchecked { activeFundraiserCount--; }
         emit FundraiserDeactivated(id, address(_fundraisers[id]));
     }
 
     function updateMinGoal(uint256 newMinGoal) external onlyRole(ADMIN_ROLE) {
-        require(newMinGoal > 0 && newMinGoal < maxGoal, "Invalid min goal");
+        if (newMinGoal == 0 || newMinGoal >= maxGoal) revert InvalidGoalParams();
         minGoal = newMinGoal;
     }
 
     function updateMaxGoal(uint256 newMaxGoal) external onlyRole(ADMIN_ROLE) {
-        require(newMaxGoal > minGoal, "Invalid max goal");
+        if (newMaxGoal <= minGoal) revert InvalidGoalParams();
         maxGoal = newMaxGoal;
     }
 
     function updateDurationLimits(uint256 newMinDuration, uint256 newMaxDuration) external onlyRole(ADMIN_ROLE) {
-        require(newMinDuration > 0 && newMinDuration < newMaxDuration, "Invalid duration limits");
+        if (newMinDuration == 0 || newMinDuration >= newMaxDuration) revert InvalidDurationParams();
         minDuration = newMinDuration;
         maxDuration = newMaxDuration;
     }
 
     function updatePlatformFeeRecipient(address newRecipient) external onlyRole(ADMIN_ROLE) {
-        require(newRecipient != address(0), "Invalid address");
+        if (newRecipient == address(0)) revert ZeroAddress();
         address oldRecipient = platformFeeRecipient;
         platformFeeRecipient = newRecipient;
         emit PlatformFeeRecipientUpdated(oldRecipient, newRecipient);
@@ -853,7 +794,7 @@ contract FundraiserFactory is AccessControl, Pausable, ReentrancyGuard {
     function unpause() external onlyRole(ADMIN_ROLE) { _unpause(); }
 
     function updateBridge(address _newBridge) external onlyRole(ADMIN_ROLE) {
-        require(_newBridge != address(0), "Invalid bridge address");
+        if (_newBridge == address(0)) revert ZeroAddress();
         fundBraveBridge = _newBridge;
         emit BridgeUpdated(_newBridge);
     }

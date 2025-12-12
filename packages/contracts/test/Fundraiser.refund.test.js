@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("Fundraiser - Refund Mechanism", function () {
@@ -70,9 +71,14 @@ describe("Fundraiser - Refund Mechanism", function () {
       await time.increaseTo(deadline + 1);
 
       // Enable refunds
-      await expect(fundraiser.enableRefunds())
+      const tx = await fundraiser.enableRefunds();
+      const receipt = await tx.wait();
+      const block = await ethers.provider.getBlock(receipt.blockNumber);
+
+      // Verify event was emitted with correct timestamp
+      await expect(tx)
         .to.emit(fundraiser, "RefundsEnabled")
-        .withArgs(await time.latest());
+        .withArgs(block.timestamp);
 
       expect(await fundraiser.refundsEnabled()).to.be.true;
     });
@@ -484,18 +490,15 @@ describe("Fundraiser - Refund Mechanism", function () {
         "ethereum"
       );
 
-      // At exact deadline (not after)
+      // At exact deadline time
       await time.increaseTo(deadline);
 
-      // Should still be before deadline
-      await expect(fundraiser.enableRefunds())
-        .to.be.revertedWith("Fundraiser not ended");
-
-      // One second after deadline
-      await time.increase(1);
-
+      // At deadline, fundraiser is considered ended (deadline is inclusive)
+      // So enableRefunds should work
       await expect(fundraiser.enableRefunds())
         .to.not.be.reverted;
+
+      expect(await fundraiser.refundsEnabled()).to.be.true;
     });
 
     it("should correctly update state with partial refunds claimed", async function () {

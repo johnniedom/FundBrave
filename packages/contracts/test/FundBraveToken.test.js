@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 // --- Ethers v6 Compatibility Helpers ---
@@ -569,7 +570,8 @@ describe("FundBraveToken", function () {
             const { token, owner, user1 } = await loadFixture(deployTokenFixture);
 
             const nonce = await token.nonces(owner.address);
-            const deadline = Math.floor(Date.now() / 1000) + 3600;
+            const latestBlock = await ethers.provider.getBlock('latest');
+            const deadline = latestBlock.timestamp + 3600;
 
             // Get domain separator
             const domain = {

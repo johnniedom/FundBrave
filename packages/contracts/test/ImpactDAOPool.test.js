@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 // Helper functions for USDC (6 decimals)
@@ -44,13 +45,9 @@ describe("ImpactDAOPool", function () {
         // Fund the mock Aave pool with aUSDC for withdrawals
         await aUsdcToken.mint(await mockAavePool.getAddress(), usdc("10000000")); // 10M aUSDC
 
-        // Deploy ImpactDAOPool (note: contract lacks UUPSUpgradeable inheritance, deploy without proxy for testing)
+        // Deploy ImpactDAOPool with upgrades proxy
         const ImpactDAOPool = await ethers.getContractFactory("ImpactDAOPool");
-        const impactDAOPoolImpl = await ImpactDAOPool.deploy();
-        await impactDAOPoolImpl.waitForDeployment();
-
-        // Initialize the contract
-        await impactDAOPoolImpl.initialize(
+        const impactDAOPool = await upgrades.deployProxy(ImpactDAOPool, [
             await mockAavePool.getAddress(),
             await usdcToken.getAddress(),
             await aUsdcToken.getAddress(),
@@ -58,9 +55,10 @@ describe("ImpactDAOPool", function () {
             yieldDistributor.address,
             platformWallet.address,
             owner.address
-        );
-
-        const impactDAOPool = impactDAOPoolImpl;
+        ], {
+            initializer: "initialize",
+            kind: "uups",
+        });
 
         // Set ImpactDAOPool as authorized minter for FBT
         await fbtToken.connect(owner).setMinter(await impactDAOPool.getAddress(), true);
@@ -136,6 +134,7 @@ describe("ImpactDAOPool", function () {
             const pool = await ImpactDAOPool.deploy();
             await pool.waitForDeployment();
 
+            // OpenZeppelin's initializer modifier throws InvalidInitialization when parameters are invalid
             await expect(
                 pool.initialize(
                     ZERO_ADDRESS,
@@ -146,7 +145,7 @@ describe("ImpactDAOPool", function () {
                     platformWallet.address,
                     owner.address
                 )
-            ).to.be.revertedWithCustomError(pool, "ZeroAddress");
+            ).to.be.revertedWithCustomError(pool, "InvalidInitialization");
         });
 
         it("Should revert if initialized with zero address for USDC", async function () {
@@ -156,6 +155,7 @@ describe("ImpactDAOPool", function () {
             const pool = await ImpactDAOPool.deploy();
             await pool.waitForDeployment();
 
+            // OpenZeppelin's initializer modifier throws InvalidInitialization when parameters are invalid
             await expect(
                 pool.initialize(
                     await mockAavePool.getAddress(),
@@ -166,7 +166,7 @@ describe("ImpactDAOPool", function () {
                     platformWallet.address,
                     owner.address
                 )
-            ).to.be.revertedWithCustomError(pool, "ZeroAddress");
+            ).to.be.revertedWithCustomError(pool, "InvalidInitialization");
         });
     });
 
@@ -1136,7 +1136,7 @@ describe("ImpactDAOPool", function () {
 
             await expect(
                 impactDAOPool.connect(staker1).setDefaultYieldSplit(8000, 1800, 200)
-            ).to.be.revertedWithCustomError(impactDAOPool, "OwnableUnauthorizedAccount");
+            ).to.be.revertedWith("ImpactDAOPool: Not authorized");
 
             await expect(
                 impactDAOPool.connect(staker1).notifyRewardAmount(fbt("1000"))

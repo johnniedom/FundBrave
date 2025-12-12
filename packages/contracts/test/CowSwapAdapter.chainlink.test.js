@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-import { ethers } from "hardhat";
+const hre = require("hardhat");
+const { ethers } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("CowSwapAdapter - Chainlink Oracle Integration", function () {
@@ -134,11 +135,11 @@ describe("CowSwapAdapter - Chainlink Oracle Integration", function () {
     it("should accept price at exact staleness threshold", async function () {
       const { adapter, priceFeed } = await loadFixture(deployFixture);
 
-      // Set to exactly 1 hour ago
-      const oneHourAgo = (await time.latest()) - (60 * 60);
-      await priceFeed.setUpdatedAt(oneHourAgo);
+      // Set to exactly 1 hour ago minus 1 second (still within threshold)
+      const almostOneHour = (await time.latest()) - (60 * 60 - 1);
+      await priceFeed.setUpdatedAt(almostOneHour);
 
-      // Should still accept (threshold is 1 hour)
+      // Should accept (59 minutes 59 seconds old, within 1 hour threshold)
       await expect(adapter.getEthUsdPrice())
         .to.not.be.reverted;
     });
@@ -360,7 +361,7 @@ describe("CowSwapAdapter - Chainlink Oracle Integration", function () {
 
   describe("Staleness Threshold", function () {
     it("should have 1 hour staleness threshold", async function () {
-      const { adapter } = await loadFixture(deployFixture());
+      const { adapter } = await loadFixture(deployFixture);
 
       const threshold = await adapter.PRICE_FEED_STALENESS_THRESHOLD();
       expect(threshold).to.equal(60 * 60); // 1 hour in seconds
@@ -377,11 +378,12 @@ describe("CowSwapAdapter - Chainlink Oracle Integration", function () {
         .to.be.revertedWithCustomError(adapter, "PriceTooOld");
     });
 
-    it("should accept price updated exactly 1 hour ago", async function () {
+    it("should accept price within staleness threshold", async function () {
       const { adapter, priceFeed } = await loadFixture(deployFixture);
 
-      const exactlyOneHour = (await time.latest()) - (60 * 60);
-      await priceFeed.setUpdatedAt(exactlyOneHour);
+      // Set to 30 minutes ago (well within 1 hour threshold)
+      const thirtyMinutesAgo = (await time.latest()) - (30 * 60);
+      await priceFeed.setUpdatedAt(thirtyMinutesAgo);
 
       await expect(adapter.getEthUsdPrice())
         .to.not.be.reverted;

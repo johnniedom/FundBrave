@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-import { ethers } from "hardhat";
+const hre = require("hardhat");
+const { ethers } = hre;
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("MorphoStakingPool - Pause Mechanism", function () {
@@ -78,44 +79,49 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
       // Pause the pool
       await pool.connect(owner).pause();
 
-      // Mint USDT to factory
-      await usdt.mint(factory.address, ethers.parseUnits("1000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("1000", 6));
+      // Mint USDT to factory and transfer to pool
+      const amount = ethers.parseUnits("100", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
 
       // Try to deposit (factory calling depositFor)
       await expect(
-        pool.connect(factory).depositFor(user1.address, ethers.parseUnits("100", 6))
+        pool.connect(factory).depositFor(user1.address, amount)
       ).to.be.revertedWithCustomError(pool, "EnforcedPause");
     });
 
     it("should allow depositFor when not paused", async function () {
       const { pool, usdt, user1, factory } = await loadFixture(deployFixture);
 
-      // Mint USDT to factory
-      await usdt.mint(factory.address, ethers.parseUnits("1000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("1000", 6));
+      // Mint USDT to factory and transfer to pool
+      const amount = ethers.parseUnits("100", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
 
       // Should work when not paused
       await expect(
-        pool.connect(factory).depositFor(user1.address, ethers.parseUnits("100", 6))
+        pool.connect(factory).depositFor(user1.address, amount)
       ).to.emit(pool, "Staked")
-        .withArgs(user1.address, ethers.parseUnits("100", 6));
+        .withArgs(user1.address, amount);
 
-      expect(await pool.stakerPrincipal(user1.address)).to.equal(ethers.parseUnits("100", 6));
+      expect(await pool.stakerPrincipal(user1.address)).to.equal(amount);
     });
 
     it("should resume depositFor after unpause", async function () {
       const { pool, usdt, owner, user1, factory } = await loadFixture(deployFixture);
 
-      await usdt.mint(factory.address, ethers.parseUnits("1000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("1000", 6));
+      const amount = ethers.parseUnits("100", 6);
+      await usdt.mint(factory.address, amount * 2n);
 
       // Pause
       await pool.connect(owner).pause();
 
+      // Transfer for first attempt
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
+
       // Blocked
       await expect(
-        pool.connect(factory).depositFor(user1.address, ethers.parseUnits("100", 6))
+        pool.connect(factory).depositFor(user1.address, amount)
       ).to.be.revertedWithCustomError(pool, "EnforcedPause");
 
       // Unpause
@@ -123,23 +129,24 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
 
       // Works now
       await expect(
-        pool.connect(factory).depositFor(user1.address, ethers.parseUnits("100", 6))
+        pool.connect(factory).depositFor(user1.address, amount)
       ).to.not.be.reverted;
 
-      expect(await pool.stakerPrincipal(user1.address)).to.equal(ethers.parseUnits("100", 6));
+      expect(await pool.stakerPrincipal(user1.address)).to.equal(amount);
     });
 
     it("should revert depositFor when paused even for factory", async function () {
       const { pool, usdt, owner, user1, factory } = await loadFixture(deployFixture);
 
-      await usdt.mint(factory.address, ethers.parseUnits("500", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("500", 6));
+      const amount = ethers.parseUnits("100", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
 
       await pool.connect(owner).pause();
 
       // Even factory (authorized caller) is blocked
       await expect(
-        pool.connect(factory).depositFor(user1.address, ethers.parseUnits("100", 6))
+        pool.connect(factory).depositFor(user1.address, amount)
       ).to.be.revertedWithCustomError(pool, "EnforcedPause");
     });
   });
@@ -150,9 +157,10 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
       const { pool, usdt, user1, factory } = fixture;
 
       // Setup: deposit first
-      await usdt.mint(factory.address, ethers.parseUnits("1000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("1000", 6));
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("500", 6));
+      const amount = ethers.parseUnits("500", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
+      await pool.connect(factory).depositFor(user1.address, amount);
 
       return fixture;
     }
@@ -225,15 +233,18 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
   describe("harvestAndDistribute When Paused", function () {
     async function setupWithYield() {
       const fixture = await loadFixture(deployFixture);
-      const { pool, usdt, morphoVault, user1, factory } = fixture;
+      const { pool, usdt, morphoVault, user1, factory, owner } = fixture;
 
       // Deposit
-      await usdt.mint(factory.address, ethers.parseUnits("10000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("10000", 6));
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("10000", 6));
+      const amount = ethers.parseUnits("10000", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
+      await pool.connect(factory).depositFor(user1.address, amount);
 
-      // Generate yield in Morpho vault
-      await morphoVault.generateYield(ethers.parseUnits("1000", 6));
+      // Generate yield in Morpho vault - need to mint USDT to morphoVault first
+      const yieldAmount = ethers.parseUnits("1000", 6);
+      await usdt.mint(await morphoVault.getAddress(), yieldAmount);
+      await morphoVault.connect(owner).generateYield(yieldAmount);
 
       return fixture;
     }
@@ -309,9 +320,10 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
       const { pool, usdt, fbt, owner, user1, factory } = fixture;
 
       // Deposit
-      await usdt.mint(factory.address, ethers.parseUnits("1000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("1000", 6));
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("1000", 6));
+      const amount = ethers.parseUnits("1000", 6);
+      await usdt.mint(factory.address, amount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount);
+      await pool.connect(factory).depositFor(user1.address, amount);
 
       // Add FBT rewards
       await fbt.mint(await pool.getAddress(), ethers.parseEther("10000"));
@@ -366,9 +378,10 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
       expect(await pool.paused()).to.be.false;
 
       // Deposit
-      await usdt.mint(factory.address, ethers.parseUnits("5000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("5000", 6));
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("5000", 6));
+      const depositAmount = ethers.parseUnits("5000", 6);
+      await usdt.mint(factory.address, depositAmount);
+      await usdt.connect(factory).transfer(await pool.getAddress(), depositAmount);
+      await pool.connect(factory).depositFor(user1.address, depositAmount);
 
       // Generate yield
       await morphoVault.generateYield(ethers.parseUnits("500", 6));
@@ -392,18 +405,22 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
     it("should handle multiple pause/unpause cycles", async function () {
       const { pool, usdt, owner, user1, factory } = await loadFixture(deployFixture);
 
-      await usdt.mint(factory.address, ethers.parseUnits("3000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("3000", 6));
+      const amount1 = ethers.parseUnits("1000", 6);
+      const amount2 = ethers.parseUnits("500", 6);
+
+      await usdt.mint(factory.address, amount1 + amount2);
 
       // Deposit
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("1000", 6));
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount1);
+      await pool.connect(factory).depositFor(user1.address, amount1);
 
       // Cycle 1
       await pool.connect(owner).pause();
       await pool.connect(owner).unpause();
 
       // Deposit again
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("500", 6));
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount2);
+      await pool.connect(factory).depositFor(user1.address, amount2);
 
       // Cycle 2
       await pool.connect(owner).pause();
@@ -421,11 +438,16 @@ describe("MorphoStakingPool - Pause Mechanism", function () {
       const { pool, usdt, fbt, owner, user1, user2, factory } = await loadFixture(deployFixture);
 
       // Setup complex state
-      await usdt.mint(factory.address, ethers.parseUnits("10000", 6));
-      await usdt.connect(factory).approve(await pool.getAddress(), ethers.parseUnits("10000", 6));
+      const amount1 = ethers.parseUnits("3000", 6);
+      const amount2 = ethers.parseUnits("2000", 6);
 
-      await pool.connect(factory).depositFor(user1.address, ethers.parseUnits("3000", 6));
-      await pool.connect(factory).depositFor(user2.address, ethers.parseUnits("2000", 6));
+      await usdt.mint(factory.address, amount1 + amount2);
+
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount1);
+      await pool.connect(factory).depositFor(user1.address, amount1);
+
+      await usdt.connect(factory).transfer(await pool.getAddress(), amount2);
+      await pool.connect(factory).depositFor(user2.address, amount2);
 
       await fbt.mint(await pool.getAddress(), ethers.parseEther("5000"));
       await pool.connect(owner).notifyRewardAmount(ethers.parseEther("5000"));
