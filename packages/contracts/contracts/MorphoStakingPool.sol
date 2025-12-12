@@ -143,7 +143,7 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable, Pausable {
 
     // --- Reward Claiming ---
 
-    function claimAllRewards() external nonReentrant updateReward(msg.sender) {
+    function claimAllRewards() external nonReentrant whenNotPaused updateReward(msg.sender) {
         _claimUSDT();
         _claimFBT();
     }
@@ -169,7 +169,7 @@ contract MorphoStakingPool is ReentrancyGuard, Ownable, Pausable {
     /**
      * @dev Legacy support for claiming just staking rewards (USDT)
      */
-    function claimStakerRewards() external nonReentrant updateReward(msg.sender) {
+    function claimStakerRewards() external nonReentrant whenNotPaused updateReward(msg.sender) {
         _claimUSDT();
     }
 

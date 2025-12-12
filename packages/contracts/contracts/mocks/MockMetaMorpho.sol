@@ -52,8 +52,9 @@ contract MockMetaMorpho {
     }
 
     function previewRedeem(uint256 shareAmount) external view returns (uint256) {
-        // Simple 1:1 plus any generated yield
-        return shareAmount;
+        // Calculate proportional assets including yield
+        if (totalShares == 0) return 0;
+        return (shareAmount * totalAssets) / totalShares;
     }
 
     function generateYield(uint256 yieldAmount) external {

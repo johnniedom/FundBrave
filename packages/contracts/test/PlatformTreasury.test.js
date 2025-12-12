@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 
@@ -66,6 +67,9 @@ describe("PlatformTreasury", function () {
 
     // Update WealthBuildingDonation to use treasury address
     await wealthBuilding.setPlatformTreasury(await treasury.getAddress());
+
+    // Transfer ownership of WealthBuildingDonation to treasury so it can register fundraiser
+    await wealthBuilding.transferOwnership(await treasury.getAddress());
 
     // Register treasury as a fundraiser in WealthBuildingDonation
     await treasury.registerTreasuryFundraiser();
@@ -407,9 +411,9 @@ describe("PlatformTreasury", function () {
       expect(operationalFunds).to.equal(expectedOperationalFunds);
 
       // Check endowment through WealthBuildingDonation
-      const [principal, , , , ] = await treasury.getTreasuryInfo();
+      const [, , , , endowmentPrincipal, ] = await treasury.getTreasuryInfo();
       const expectedEndowment = (feeAmount * 2000n) / 10000n; // 20% = 2000 USDC
-      expect(principal).to.equal(expectedEndowment);
+      expect(endowmentPrincipal).to.equal(expectedEndowment);
     });
 
     it("should allow manual staking via stakeFees()", async function () {
@@ -454,7 +458,7 @@ describe("PlatformTreasury", function () {
 
   describe("Platform Yield Harvesting", function () {
     async function setupYieldScenario(fixture) {
-      const { treasury, feeSender1, aUsdc, wealthBuilding } = fixture;
+      const { treasury, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } = fixture;
 
       // Stake fees to create endowment
       const feeAmount = ethers.parseUnits("10000", USDC_DECIMALS);
@@ -463,6 +467,9 @@ describe("PlatformTreasury", function () {
       // Simulate yield by minting aUSDC to WealthBuildingDonation
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       return { yieldAmount };
     }
@@ -803,7 +810,7 @@ describe("PlatformTreasury", function () {
 
   describe("Yield Claiming (FBT Stakers)", function () {
     async function setupYieldForStakers(fixture) {
-      const { treasury, fbtStaker1, feeSender1, aUsdc, wealthBuilding } = fixture;
+      const { treasury, fbtStaker1, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } = fixture;
 
       // Stake FBT
       const fbtAmount = ethers.parseUnits("1000", FBT_DECIMALS);
@@ -816,6 +823,9 @@ describe("PlatformTreasury", function () {
       // Simulate yield
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       // Harvest yield
       await treasury.harvestPlatformYield();
@@ -915,7 +925,7 @@ describe("PlatformTreasury", function () {
       const fixture = await loadFixture(deployFixture);
       await setupYieldForStakers(fixture);
 
-      const { treasury, fbtStaker1, aUsdc, wealthBuilding } = fixture;
+      const { treasury, fbtStaker1, usdc, aUsdc, wealthBuilding, mockAavePool } = fixture;
 
       // First claim
       await treasury.connect(fbtStaker1).claimYield();
@@ -923,6 +933,10 @@ describe("PlatformTreasury", function () {
       // Generate more yield
       const moreYield = ethers.parseUnits("500", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), moreYield);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), moreYield);
+
       await treasury.harvestPlatformYield();
 
       // Second claim
@@ -932,7 +946,7 @@ describe("PlatformTreasury", function () {
 
   describe("Exit Function", function () {
     async function setupForExit(fixture) {
-      const { treasury, fbtStaker1, feeSender1, aUsdc, wealthBuilding } = fixture;
+      const { treasury, fbtStaker1, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } = fixture;
 
       // Stake FBT
       const fbtAmount = ethers.parseUnits("1000", FBT_DECIMALS);
@@ -944,6 +958,9 @@ describe("PlatformTreasury", function () {
 
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       await treasury.harvestPlatformYield();
 
@@ -1041,7 +1058,7 @@ describe("PlatformTreasury", function () {
 
     it("earnedYield() should calculate pending yield correctly", async function () {
       const fixture = await loadFixture(deployFixture);
-      const { treasury, fbtStaker1, feeSender1, aUsdc, wealthBuilding } = fixture;
+      const { treasury, fbtStaker1, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } = fixture;
 
       // Stake FBT
       const fbtAmount = ethers.parseUnits("1000", FBT_DECIMALS);
@@ -1053,6 +1070,9 @@ describe("PlatformTreasury", function () {
 
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       await treasury.harvestPlatformYield();
 
@@ -1189,22 +1209,52 @@ describe("PlatformTreasury", function () {
     });
 
     it("should allow owner to register treasury fundraiser in WealthBuildingDonation", async function () {
-      const { wealthBuilding, owner } = await loadFixture(deployFixture);
+      const { wealthBuilding, owner, usdc, fbt } = await loadFixture(deployFixture);
 
-      const PlatformTreasury = await ethers.getContractFactory("PlatformTreasury");
-      const newTreasury = await upgrades.deployProxy(
-        PlatformTreasury,
+      // Deploy new WealthBuildingDonation for this test to have clean state
+      const WealthBuildingDonation = await ethers.getContractFactory("WealthBuildingDonation");
+      const MockAavePool = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockAavePool");
+      const MockERC20 = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockERC20");
+      const MockStockSwapAdapter = await ethers.getContractFactory("MockStockSwapAdapter");
+
+      const testUsdc = await MockERC20.deploy("USD Coin", "USDC", USDC_DECIMALS);
+      const testAUsdc = await MockERC20.deploy("Aave USDC", "aUSDC", USDC_DECIMALS);
+      const testMockAavePool = await MockAavePool.deploy(
+        await testUsdc.getAddress(),
+        await testAUsdc.getAddress()
+      );
+      const testSwapAdapter = await MockStockSwapAdapter.deploy(await testUsdc.getAddress());
+
+      const newWealthBuilding = await upgrades.deployProxy(
+        WealthBuildingDonation,
         [
-          await wealthBuilding.USDC(),
-          await wealthBuilding.getAddress(),
-          await wealthBuilding.USDC(), // Just using USDC as FBT placeholder
+          await testMockAavePool.getAddress(),
+          await testUsdc.getAddress(),
+          await testAUsdc.getAddress(),
+          await testSwapAdapter.getAddress(),
+          owner.address, // Initial platformTreasury
           owner.address,
         ],
         { kind: "uups" }
       );
 
+      const PlatformTreasury = await ethers.getContractFactory("PlatformTreasury");
+      const newTreasury = await upgrades.deployProxy(
+        PlatformTreasury,
+        [
+          await testUsdc.getAddress(),
+          await newWealthBuilding.getAddress(),
+          await fbt.getAddress(),
+          owner.address,
+        ],
+        { kind: "uups" }
+      );
+
+      // Transfer ownership of WealthBuildingDonation to treasury so it can register
+      await newWealthBuilding.transferOwnership(await newTreasury.getAddress());
+
       await expect(newTreasury.registerTreasuryFundraiser()).to.emit(
-        wealthBuilding,
+        newWealthBuilding,
         "FundraiserRegistered"
       );
     });
@@ -1437,7 +1487,7 @@ describe("PlatformTreasury", function () {
     });
 
     it("should harvest yield via WealthBuildingDonation.harvestYield()", async function () {
-      const { treasury, feeSender1, aUsdc, wealthBuilding, fbtStaker1 } = await loadFixture(deployFixture);
+      const { treasury, feeSender1, usdc, aUsdc, wealthBuilding, fbtStaker1, mockAavePool } = await loadFixture(deployFixture);
 
       // Stake FBT
       await treasury.connect(fbtStaker1).stakeFBT(ethers.parseUnits("1000", FBT_DECIMALS));
@@ -1448,6 +1498,9 @@ describe("PlatformTreasury", function () {
 
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       await expect(treasury.harvestPlatformYield()).to.emit(wealthBuilding, "YieldHarvested");
     });
@@ -1465,7 +1518,7 @@ describe("PlatformTreasury", function () {
     });
 
     it("End-to-end: receive fees → stake → harvest yield → distribute to FBT stakers", async function () {
-      const { treasury, feeSender1, fbtStaker1, fbtStaker2, aUsdc, wealthBuilding, usdc } =
+      const { treasury, feeSender1, fbtStaker1, fbtStaker2, aUsdc, wealthBuilding, usdc, mockAavePool } =
         await loadFixture(deployFixture);
 
       // 1. Stake FBT
@@ -1482,6 +1535,9 @@ describe("PlatformTreasury", function () {
       // 3. Simulate yield generation
       const yieldAmount = ethers.parseUnits("3000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       // 4. Harvest platform yield
       await treasury.harvestPlatformYield();
@@ -1509,7 +1565,7 @@ describe("PlatformTreasury", function () {
 
   describe("Multi-Staker Scenarios", function () {
     it("should distribute yield proportionally to multiple FBT stakers", async function () {
-      const { treasury, fbtStaker1, fbtStaker2, fbtStaker3, feeSender1, aUsdc, wealthBuilding } =
+      const { treasury, fbtStaker1, fbtStaker2, fbtStaker3, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } =
         await loadFixture(deployFixture);
 
       // Stake different amounts
@@ -1528,6 +1584,9 @@ describe("PlatformTreasury", function () {
       const yieldAmount = ethers.parseUnits("6000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
 
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
+
       await treasury.harvestPlatformYield();
 
       const earned1 = await treasury.earnedYield(fbtStaker1.address);
@@ -1541,7 +1600,7 @@ describe("PlatformTreasury", function () {
     });
 
     it("should handle stakers joining/leaving correctly", async function () {
-      const { treasury, fbtStaker1, fbtStaker2, feeSender1, aUsdc, wealthBuilding } =
+      const { treasury, fbtStaker1, fbtStaker2, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } =
         await loadFixture(deployFixture);
 
       // Staker1 stakes
@@ -1554,6 +1613,9 @@ describe("PlatformTreasury", function () {
 
       const yield1 = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yield1);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yield1);
 
       await treasury.harvestPlatformYield();
 
@@ -1569,6 +1631,9 @@ describe("PlatformTreasury", function () {
 
       const yield2 = ethers.parseUnits("2000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yield2);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yield2);
 
       await treasury.harvestPlatformYield();
 
@@ -1606,7 +1671,7 @@ describe("PlatformTreasury", function () {
     });
 
     it("should prevent rounding errors (no lost funds)", async function () {
-      const { treasury, fbtStaker1, fbtStaker2, fbtStaker3, feeSender1, aUsdc, wealthBuilding, usdc } =
+      const { treasury, fbtStaker1, fbtStaker2, fbtStaker3, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } =
         await loadFixture(deployFixture);
 
       // Stake odd amounts to test rounding
@@ -1620,6 +1685,9 @@ describe("PlatformTreasury", function () {
 
       const yieldAmount = ethers.parseUnits("1337", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       const treasuryBalanceBefore = await usdc.balanceOf(await treasury.getAddress());
 
@@ -1787,7 +1855,7 @@ describe("PlatformTreasury", function () {
     });
 
     it("should measure gas for harvestPlatformYield()", async function () {
-      const { treasury, fbtStaker1, feeSender1, aUsdc, wealthBuilding } = await loadFixture(deployFixture);
+      const { treasury, fbtStaker1, feeSender1, usdc, aUsdc, wealthBuilding, mockAavePool } = await loadFixture(deployFixture);
 
       // Setup
       await treasury.connect(fbtStaker1).stakeFBT(ethers.parseUnits("1000", FBT_DECIMALS));
@@ -1797,6 +1865,9 @@ describe("PlatformTreasury", function () {
 
       const yieldAmount = ethers.parseUnits("1000", USDC_DECIMALS);
       await aUsdc.mint(await wealthBuilding.getAddress(), yieldAmount);
+
+      // MockAavePool needs USDC to fulfill withdrawals
+      await usdc.mint(await mockAavePool.getAddress(), yieldAmount);
 
       const tx = await treasury.harvestPlatformYield();
       const receipt = await tx.wait();

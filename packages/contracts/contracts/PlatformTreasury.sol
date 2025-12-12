@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -117,7 +118,8 @@ contract PlatformTreasury is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -346,6 +348,7 @@ contract PlatformTreasury is
         __Ownable_init(_owner);
         __ReentrancyGuard_init();
         __Pausable_init();
+        __UUPSUpgradeable_init();
 
         USDC = IERC20(_usdc);
         wealthBuildingDonation = IWealthBuildingDonation(_wealthBuildingDonation);
@@ -797,4 +800,13 @@ contract PlatformTreasury is
 
         emit TimelockSet(oldTimelock, _timelock);
     }
+
+    // ============ UUPS Upgrade Authorization ============
+
+    /**
+     * @notice Authorize contract upgrades
+     * @param newImplementation Address of the new implementation
+     * @dev Only owner can authorize upgrades
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

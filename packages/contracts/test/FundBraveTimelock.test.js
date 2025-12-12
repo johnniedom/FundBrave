@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("FundBraveTimelock Integration", function () {
@@ -23,9 +24,9 @@ describe("FundBraveTimelock Integration", function () {
     const MockERC20 = await ethers.getContractFactory("MockERC20");
     const usdc = await MockERC20.deploy("USDC", "USDC", 6);
 
-    // Deploy PlatformTreasury with owner as initial owner
+    // Deploy FundBraveToken with owner as initial owner
     const FBT = await ethers.getContractFactory("FundBraveToken");
-    const fbt = await upgrades.deployProxy(FBT, ["FundBrave Token", "FBT", owner.address]);
+    const fbt = await upgrades.deployProxy(FBT, [owner.address]);
 
     const MockWealthBuilding = await ethers.getContractFactory("MockWealthBuildingDonation");
     const wealthBuilding = await MockWealthBuilding.deploy(await usdc.getAddress());
@@ -184,7 +185,7 @@ describe("FundBraveTimelock Integration", function () {
       );
 
       // Fast forward past delay
-      await time.increase(delay + 1);
+      await time.increase(delay + 1n);
 
       // Execute the operation
       await expect(
@@ -224,7 +225,7 @@ describe("FundBraveTimelock Integration", function () {
       );
 
       // Fast forward
-      await time.increase(delay + 1);
+      await time.increase(delay + 1n);
 
       // Execute
       await expect(
@@ -493,7 +494,10 @@ describe("FundBraveTimelock Integration", function () {
 
   describe("Helper Functions", function () {
     it("should correctly report operation states", async function () {
-      const { daoPool, timelock, proposer, executor, MIN_DELAY } = await loadFixture(deployFixture);
+      const { daoPool, timelock, owner, proposer, executor, MIN_DELAY } = await loadFixture(deployFixture);
+
+      // Set timelock on daoPool
+      await daoPool.connect(owner).setTimelock(await timelock.getAddress());
 
       const callData = daoPool.interface.encodeFunctionData("setDefaultYieldSplit", [
         8000, 1800, 200
@@ -528,7 +532,7 @@ describe("FundBraveTimelock Integration", function () {
       expect(await timelock.isReady(operationId)).to.be.false;
 
       // After delay
-      await time.increase(MIN_DELAY + 1);
+      await time.increase(BigInt(MIN_DELAY) + 1n);
 
       expect(await timelock.isReady(operationId)).to.be.true;
 

@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./libraries/CircuitBreaker.sol";
 
 /**
@@ -14,7 +15,7 @@ import "./libraries/CircuitBreaker.sol";
  * @dev Campaign Contract
  * Features: Donations, Voting, Proposals, Media Archives, Refunds, Circuit Breaker.
  */
-contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
+contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
     using CircuitBreaker for CircuitBreaker.BreakerConfig;
 
@@ -130,6 +131,7 @@ contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
         __Ownable_init(_creator);
         __ReentrancyGuard_init();
         __Pausable_init();
+        __UUPSUpgradeable_init();
 
         // Init State
         id = _id;
@@ -529,6 +531,15 @@ contract Fundraiser is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrade
             circuitBreaker.getRemainingDailyCapacity()
         );
     }
+
+    // --- UUPS Upgrade Authorization ---
+
+    /**
+     * @notice Authorize contract upgrades
+     * @param newImplementation Address of the new implementation
+     * @dev Only owner can authorize upgrades
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function version() external pure returns (string memory) {
         return "1.1.0";

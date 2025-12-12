@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -29,7 +30,7 @@ interface AutomationCompatibleInterface {
  * @title GlobalStakingPool
  * @notice Stakes USDC -> Earns Aave Yield + FBT Rewards (Liquidity Mining)
  */
-contract GlobalStakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, AutomationCompatibleInterface {
+contract GlobalStakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable, UUPSUpgradeable, AutomationCompatibleInterface {
     using SafeERC20 for IERC20;
     using CircuitBreaker for CircuitBreaker.BreakerConfig;
 
@@ -254,6 +255,10 @@ contract GlobalStakingPool is Initializable, OwnableUpgradeable, ReentrancyGuard
 
     function pause() external onlyOwner { _pause(); }
     function unpause() external onlyOwner { _unpause(); }
+
+    // --- UUPS Upgrade Authorization ---
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     // --- Circuit Breaker Functions ---
 

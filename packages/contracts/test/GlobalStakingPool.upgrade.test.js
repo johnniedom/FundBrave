@@ -1,5 +1,6 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const hre = require("hardhat");
+const { ethers, upgrades } = hre;
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("GlobalStakingPool - Storage Gap & Upgrades", function () {
@@ -15,7 +16,7 @@ describe("GlobalStakingPool - Storage Gap & Upgrades", function () {
     const fbt = await upgrades.deployProxy(FBT, [owner.address]);
 
     // Deploy mock Aave pool
-    const MockAavePool = await ethers.getContractFactory("contracts/test/MockAavePool.sol:MockAavePool");
+    const MockAavePool = await ethers.getContractFactory("contracts/test/DeFiMocks.sol:MockAavePool");
     const aavePool = await MockAavePool.deploy(await usdc.getAddress(), await aUsdc.getAddress());
 
     // Deploy mock receipt token

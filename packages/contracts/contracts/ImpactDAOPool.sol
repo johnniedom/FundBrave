@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IAavePool.sol";
 
 /**
@@ -40,7 +41,8 @@ contract ImpactDAOPool is
     Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
-    PausableUpgradeable
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     using SafeERC20 for IERC20;
 
@@ -289,6 +291,7 @@ contract ImpactDAOPool is
         __Ownable_init(_owner);
         __ReentrancyGuard_init();
         __Pausable_init();
+        __UUPSUpgradeable_init();
 
         AAVE_POOL = IAavePool(_aavePool);
         USDC = IERC20(_usdc);
@@ -783,4 +786,15 @@ contract ImpactDAOPool is
         if (total != TOTAL_BASIS) revert InvalidSplitSum();
         if (split.platformShare < MIN_PLATFORM_SHARE) revert PlatformShareTooLow();
     }
+
+    // ============================================
+    // ======= UUPS UPGRADE AUTHORIZATION ========
+    // ============================================
+
+    /**
+     * @notice Authorize contract upgrades
+     * @param newImplementation Address of the new implementation
+     * @dev Only owner can authorize upgrades
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

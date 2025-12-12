@@ -247,11 +247,19 @@ contract StakingPool is Initializable, OwnableUpgradeable, ReentrancyGuardUpgrad
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            // NOTE: We transfer FBT, not mint. 
+            // NOTE: We transfer FBT, not mint.
             // The Admin/DAO must fund this contract with FBT using notifyRewardAmount first.
-            FBT.safeTransfer(msg.sender, reward); 
+            FBT.safeTransfer(msg.sender, reward);
             emit FbtRewardPaid(msg.sender, reward);
         }
+    }
+
+    /**
+     * @notice Legacy support for claiming just staker USDC rewards
+     * @dev Added for backwards compatibility with older tests/integrations
+     */
+    function claimStakerRewards() external nonReentrant whenNotPaused updateReward(msg.sender) {
+        _claimUSDC();
     }
 
     /**
