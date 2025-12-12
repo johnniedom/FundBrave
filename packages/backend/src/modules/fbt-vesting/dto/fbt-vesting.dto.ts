@@ -133,6 +133,27 @@ export class VestingSummary {
 }
 
 /**
+ * Vesting breakdown by type
+ */
+@ObjectType()
+export class VestingBreakdown {
+  @Field()
+  donationRewards: string;
+
+  @Field()
+  engagementRewards: string;
+
+  @Field()
+  teamAllocation: string;
+
+  @Field()
+  investor: string;
+
+  @Field()
+  ecosystem: string;
+}
+
+/**
  * Platform-wide vesting statistics
  */
 @ObjectType()
@@ -160,27 +181,6 @@ export class VestingStats {
 
   @Field(() => VestingBreakdown)
   byType: VestingBreakdown;
-}
-
-/**
- * Vesting breakdown by type
- */
-@ObjectType()
-export class VestingBreakdown {
-  @Field()
-  donationRewards: string;
-
-  @Field()
-  engagementRewards: string;
-
-  @Field()
-  teamAllocation: string;
-
-  @Field()
-  investor: string;
-
-  @Field()
-  ecosystem: string;
 }
 
 // ==================== Paginated Responses ====================

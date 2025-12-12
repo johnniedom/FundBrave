@@ -254,8 +254,10 @@ export class Feed {
   nextCursor?: string;
 }
 
+// Simpler trending hashtag type for social feed queries
+// For full trending data with scores and periods, use TrendingHashtag from trending module
 @ObjectType()
-export class TrendingHashtag {
+export class SocialTrendingHashtag {
   @Field()
   tag: string;
 

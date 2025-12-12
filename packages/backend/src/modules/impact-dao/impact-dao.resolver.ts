@@ -16,7 +16,7 @@ import {
   PaginatedImpactDAOStakers,
   PendingYield,
   YieldSplit,
-  RecordStakeInput,
+  ImpactDAORecordStakeInput,
   ImpactDAOStakeUpdatedPayload,
   ImpactDAOYieldHarvestedPayload,
   PaginatedYieldHarvests,
@@ -189,7 +189,7 @@ export class ImpactDAOResolver {
   })
   // @UseGuards(GqlAuthGuard)
   async recordImpactDAOStake(
-    @Args('input') input: RecordStakeInput,
+    @Args('input') input: ImpactDAORecordStakeInput,
   ): Promise<boolean> {
     // This mutation is primarily for frontend to notify backend
     // The actual processing happens via the blockchain indexer

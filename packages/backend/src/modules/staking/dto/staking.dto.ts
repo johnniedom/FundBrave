@@ -227,6 +227,27 @@ export class PendingStakingRewards {
 // ==================== Input DTOs ====================
 
 @InputType()
+export class YieldSplitInput {
+  @Field(() => Int)
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  causeShare: number;
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(0)
+  @Max(10000)
+  stakerShare: number;
+
+  @Field(() => Int)
+  @IsNumber()
+  @Min(200) // Minimum 2% platform fee
+  @Max(10000)
+  platformShare: number;
+}
+
+@InputType()
 export class RecordStakeInput {
   @Field()
   @IsString()
@@ -261,27 +282,6 @@ export class RecordStakeInput {
   @Field(() => YieldSplitInput, { nullable: true })
   @IsOptional()
   yieldSplit?: YieldSplitInput;
-}
-
-@InputType()
-export class YieldSplitInput {
-  @Field(() => Int)
-  @IsNumber()
-  @Min(0)
-  @Max(10000)
-  causeShare: number;
-
-  @Field(() => Int)
-  @IsNumber()
-  @Min(0)
-  @Max(10000)
-  stakerShare: number;
-
-  @Field(() => Int)
-  @IsNumber()
-  @Min(200) // Minimum 2% platform fee
-  @Max(10000)
-  platformShare: number;
 }
 
 @InputType()

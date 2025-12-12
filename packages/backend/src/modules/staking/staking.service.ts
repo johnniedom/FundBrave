@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, Stake as PrismaStake } from '@prisma/client';
+import { Prisma, Stake as PrismaStake, Fundraiser as PrismaFundraiser, User as PrismaUser } from '@prisma/client';
 import {
   Stake,
   StakerInfo,
@@ -482,7 +482,7 @@ export class StakingService {
     }
 
     // Validate fundraiser if provided
-    let fundraiser = null;
+    let fundraiser: PrismaFundraiser | null = null;
     if (input.fundraiserId) {
       fundraiser = await this.prisma.fundraiser.findUnique({
         where: { id: input.fundraiserId },
@@ -695,7 +695,7 @@ export class StakingService {
     }
 
     // Find fundraiser by pool address if not provided
-    let fundraiser = null;
+    let fundraiser: PrismaFundraiser | null = null;
     if (fundraiserId) {
       fundraiser = await this.prisma.fundraiser.findUnique({
         where: { id: fundraiserId },

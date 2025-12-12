@@ -633,12 +633,12 @@ export class WealthBuildingService {
     for (const holding of holdings) {
       // Simple calculation: balance * price (assuming both have same decimals)
       const currentValue =
-        (BigInt(holding.stockBalance) * BigInt(price)) / BigInt(10 ** 18);
+        (holding.stockBalance * BigInt(price)) / BigInt(10 ** 18);
 
       await this.prisma.donorStockPortfolio.update({
         where: { id: holding.id },
         data: {
-          currentValueUSD: currentValue.toString(),
+          currentValueUSD: currentValue,
         },
       });
     }
