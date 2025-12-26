@@ -67,6 +67,9 @@
   --neutral-dark-800: #05010e;
   --neutral-dark-900: #04000b;
 
+  /* Standard Border Color */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+
   /* Secondary Colors */
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -78,8 +81,8 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: #ffffff;
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.2);
   --ring: oklch(0.708 0 0);
   --radius: 0.625rem;
   --chart-1: oklch(0.646 0.222 41.116);
@@ -219,6 +222,7 @@
   /* Color mappings (link existing raw vars to Tailwind tokens) */
   /* Colors - CSS variables for dynamic theming */
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-background: var(--background);
@@ -477,6 +481,79 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(135, 98, 250, 0.8);
   }
+
+  /* Auto-hide scrollbar - only visible on hover/scroll */
+  .scrollbar-auto-hide {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-auto-hide::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-auto-hide::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-auto-hide::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+    transition: background 0.2s ease;
+  }
+
+  .scrollbar-auto-hide:hover::-webkit-scrollbar-thumb {
+    background: rgba(135, 98, 250, 0.5);
+  }
+
+  .scrollbar-auto-hide:hover {
+    scrollbar-color: rgba(135, 98, 250, 0.5) transparent;
+  }
+
+  /* Brand gradient backgrounds for buttons and elements */
+  .bg-brand-gradient {
+    background: linear-gradient(
+      139deg,
+      var(--primary-500) 0%,
+      var(--soft-purple-500) 100%
+    );
+  }
+
+  .bg-brand-gradient-hover:hover {
+    background: linear-gradient(
+      139deg,
+      var(--primary-600) 0%,
+      var(--soft-purple-600) 100%
+    );
+  }
+
+  /* Progress bar gradient */
+  .bg-progress-gradient {
+    background: linear-gradient(
+      150deg,
+      var(--primary-500) 0%,
+      var(--soft-purple-500) 100%
+    );
+  }
+
+  /* Underline gradient for links */
+  .underline-brand-gradient {
+    background: linear-gradient(
+      172deg,
+      var(--primary-500) 0%,
+      var(--soft-purple-500) 100%
+    );
+  }
+
+  /* Profile tab indicator gradient */
+  .tab-indicator-gradient {
+    background: linear-gradient(
+      172deg,
+      var(--primary-500) 0%,
+      var(--soft-purple-500) 100%
+    );
+  }
 }
 
 .dark {
@@ -602,12 +679,32 @@ a,
       scrollbar-color: var(--muted) transparent;
     }
   }
+
+  /* Fix browser autofill background on dark theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--neutral-dark-400) inset !important;
+    -webkit-text-fill-color: white !important;
+    caret-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 /* Focus states */
 .focus-ring:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+/* Standard subtle border for dark backgrounds */
+.border-subtle {
+  border: 1px solid var(--border-subtle);
 }
 
 /* Common component styling */

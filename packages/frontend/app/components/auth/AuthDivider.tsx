@@ -17,13 +17,13 @@ export default function AuthDivider({ text, delay = 0.8 }: AuthDividerProps) {
       transition={{ delay, duration: 0.5 }}
     >
       <motion.div
-        className="flex-1 border-t border-gray-600"
+        className="flex-1 border-t border-border"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ delay: delay + 0.1, duration: 0.5 }}
       />
       <motion.span
-        className="text-gray-400"
+        className="text-muted-foreground"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: delay + 0.2, duration: 0.3 }}

@@ -329,7 +329,7 @@ const ShareCampaignModal: React.FC<ShareCampaignModalProps> = ({
               </div>
 
               {/* Copy Link Section */}
-              <div className="border border-white rounded-[20px] p-5 flex items-center gap-2">
+              <div className="border border-border-subtle rounded-[20px] p-5 flex items-center gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <svg
                     className="w-6 h-6 text-white/80 flex-shrink-0"

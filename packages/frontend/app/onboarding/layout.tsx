@@ -17,8 +17,8 @@ export default function OnboardingLayout({ children }: OnboardingLayoutProps) {
   return (
     <OnboardingDataProvider>
       <OnboardingProvider>
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center font-sans">
-          <div className="w-full bg-slate-800 flex flex-col md:flex-row h-dvh h-vdh">
+        <div className="min-h-screen bg-neutral-dark-500 flex items-center justify-center font-sans">
+          <div className="w-full bg-neutral-dark-500 flex flex-col md:flex-row h-dvh h-vdh">
             {/* Desktop Sidebar */}
             <OnboardingAside />
 

@@ -14,7 +14,7 @@ export const MobileProgressHeader = () => {
   const { steps, currentStepIndex } = useOnboarding();
 
   return (
-    <div className="md:hidden w-full bg-slate-900/50 p-6 rounded-t-2xl isolate">
+    <div className="md:hidden w-full bg-neutral-dark-500/50 p-6 rounded-t-2xl isolate">
       {/* Logo */}
       <div className="flex items-center gap-3 text-white mb-6">
         <Image
@@ -59,7 +59,7 @@ export const MobileProgressHeader = () => {
         <p className="text-white font-semibold">
           {steps[currentStepIndex].title}
         </p>
-        <p className="text-gray-400 text-sm">
+        <p className="text-muted-foreground text-sm">
           {steps[currentStepIndex].subtitle}
         </p>
       </div>

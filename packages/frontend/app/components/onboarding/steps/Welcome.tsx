@@ -31,7 +31,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 200, damping: 15 }}
         style={{
-          background: "linear-gradient(to right, #6f22ac, #9b51e0)",
+          background: "linear-gradient(to right, var(--purple-600), var(--purple-400))",
         }}
       >
         <PartyPopper className="w-10 h-10 md:w-12 md:h-12 text-white" />
@@ -40,7 +40,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
       <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
         You're all set!
       </h2>
-      <p className="text-gray-400 mb-8 text-sm md:text-base">
+      <p className="text-muted-foreground mb-8 text-sm md:text-base">
         Welcome to FundBrave. You're ready to start your journey.
       </p>
 
@@ -49,7 +49,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         {onBack && (
           <motion.button
             onClick={onBack}
-            className="py-3 px-6 bg-slate-700 rounded-lg text-white font-semibold hover:bg-slate-600 transition-colors"
+            className="py-3 px-6 bg-secondary rounded-lg text-white font-semibold hover:bg-secondary/80 transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -62,7 +62,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           style={{
-            background: "linear-gradient(97deg, #450CF0 0%, #CD82FF 100%)",
+            background: "linear-gradient(97deg, var(--primary-500) 0%, var(--soft-purple-500) 100%)",
           }}
         >
           Go to Home

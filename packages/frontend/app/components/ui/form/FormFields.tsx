@@ -82,7 +82,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
           aria-label={label}
           required={required}
           className={cn(
-            "w-full bg-[#221A31] rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
+            "w-full bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
             "px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-[18px]",
             "h-12 sm:h-13 lg:h-14",
             "font-['Poppins'] font-medium text-[14px] sm:text-[15px] lg:text-[16px]",
@@ -135,7 +135,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         placeholder={placeholder}
         required={required}
         className={cn(
-          "w-full bg-[#221A31] rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
+          "w-full bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
           "px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-[18px]",
           "h-12 sm:h-13 lg:h-14",
           "font-['Poppins'] font-medium text-[14px] sm:text-[15px] lg:text-[16px]",
@@ -192,7 +192,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
       )}
       <div
         className={cn(
-          "bg-[#221A31] rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
+          "bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
           "p-4 sm:p-6 lg:p-8 flex flex-col justify-between",
           "focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-opacity-50",
           "transition-all duration-200",

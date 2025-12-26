@@ -322,7 +322,10 @@ const ThemePage = () => {
       <AddReminderModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onProviderSelect={handleProviderSelect}
+        campaignTitle="Support John's Fight Against Cancer"
+        campaignEndDate={new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)}
+        campaignUrl="https://www.fundbrave.com/campaign/supportjohnsfightagainscancer"
+        onReminderSet={handleProviderSelect}
       />
 
       {/* CreatePost Popup */}
