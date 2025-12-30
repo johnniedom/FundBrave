@@ -580,13 +580,13 @@
   --accent-foreground: #ffffff;
   --destructive: #ff0000;
   --destructive-foreground: #ffffff;
-  --border: #3109aa; /* Primary Blue 700 */
-  --input: #3109aa; /* Primary Blue 700 */
+  --border: rgba(255, 255, 255, 0.1); /* Primary Blue 700  it was 3f0bda*/ 
+  --input: rgba(255, 255, 255, 0.1); /* Primary Blue 700 it was 3f0bda */
   --ring: #a98ff8; /* Primary Blue 200 */
 }
 
 * {
-  border-color: var(--border);
+  /* border-color: var(--border); */
 }
 
 body {
