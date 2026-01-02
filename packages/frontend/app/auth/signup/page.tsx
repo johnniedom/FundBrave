@@ -13,7 +13,7 @@ import SocialLoginButtons from "../../components/auth/SocialLoginButtons";
 import AuthDivider from "../../components/auth/AuthDivider";
 import ServerError from "../../components/auth/ServerError";
 import FormInput from "../../components/auth/FormInput";
-import LoadingButton from "../../components/auth/LoadingButton";
+import { Button } from "../../components/ui/button";
 
 type SignUpData = z.infer<typeof signUpSchema>;
 
@@ -273,14 +273,17 @@ export default function SignUpPage({ onToggle }: SignUpPageProps) {
             </motion.div>
           </motion.div>
 
-          <LoadingButton
+          <Button
             type="submit"
-            isLoading={isSubmitting}
+            loading={isSubmitting}
             disabled={isSubmitting}
             loadingText="Signing up..."
+            variant="primary"
+            size="md"
+            fullWidth
           >
             Join Referral Program
-          </LoadingButton>
+          </Button>
         </motion.form>
 
         {/* Sign In Link */}

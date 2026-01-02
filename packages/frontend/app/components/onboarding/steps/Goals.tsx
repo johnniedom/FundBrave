@@ -11,8 +11,8 @@ import {
   Globe,
   Sparkles,
   Check,
-  Loader2,
-} from "lucide-react";
+} from "@/app/components/ui/icons";
+import OnboardingNavButtons from "@/app/components/onboarding/OnboardingNavButtons";
 
 interface GoalOption {
   id: string;
@@ -85,7 +85,6 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
     }
 
     setIsLoading(true);
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 
@@ -119,17 +118,17 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
             <motion.button
               key={goal.id}
               onClick={() => toggleGoal(goal.id)}
-              className={`relative flex flex-col gap-3 p-5 rounded-2xl text-left transition-all ${isSelected
+              className={`relative flex flex-col gap-3 p-5 rounded-2xl text-left transition-all ${
+                isSelected
                   ? "bg-gradient-to-br from-purple-800/50 to-purple-900/40 border border-purple-400/30"
                   : "bg-gradient-to-br from-[#1a1525] to-[#13101d] border border-white/10 hover:border-purple-400/25"
-                }`}
+              }`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + index * 0.05 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              {/* Selected indicator */}
               {isSelected && (
                 <motion.div
                   className="absolute top-3 right-3 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center"
@@ -140,18 +139,15 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
                   <Check className="w-4 h-4 text-white" />
                 </motion.div>
               )}
-
-              {/* Icon */}
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center ${isSelected
+                className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  isSelected
                     ? "bg-purple-500/25 text-purple-300"
                     : "bg-purple-900/20 text-purple-400"
-                  }`}
+                }`}
               >
                 {goal.icon}
               </div>
-
-              {/* Content */}
               <div className="flex flex-col gap-1">
                 <h3 className="text-white font-semibold text-lg">
                   {goal.title}
@@ -189,41 +185,11 @@ const Goals: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
       </motion.p>
 
       {/* Navigation Buttons */}
-      <motion.div
-        className="flex gap-4 items-center justify-center w-full"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-      >
-        {onBack && (
-          <button
-            onClick={onBack}
-            disabled={isLoading}
-            className="w-[200px] h-14 px-10 py-4 bg-[rgba(69,12,240,0.1)] border border-[#450cf0] rounded-[20px] text-white font-semibold text-base tracking-wide backdrop-blur-md shadow-[0px_8px_30px_0px_rgba(29,5,82,0.35)] hover:bg-[rgba(69,12,240,0.15)] transition-colors disabled:opacity-50"
-          >
-            Back
-          </button>
-        )}
-        {onNext && (
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-[200px] h-14 px-8 py-4 rounded-[20px] text-white font-semibold text-lg tracking-wide shadow-[0px_3px_3px_0px_rgba(254,254,254,0.25)] transition-all hover:shadow-lg disabled:opacity-70 flex items-center justify-center gap-2"
-            style={{
-              background: "linear-gradient(97deg, #450CF0 0%, #CD82FF 100%)",
-            }}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Next"
-            )}
-          </button>
-        )}
-      </motion.div>
+      <OnboardingNavButtons
+        onBack={onBack}
+        onNext={handleSubmit}
+        isLoading={isLoading}
+      />
     </div>
   );
 };

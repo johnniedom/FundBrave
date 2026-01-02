@@ -5,8 +5,8 @@ import {
   UsersRound,
   PencilLine,
   Rocket,
-  LucideIcon,
-} from "lucide-react";
+  type IconComponent,
+} from "@/app/components/ui/icons";
 
 import { cn } from "../../../lib/utils";
 
@@ -21,7 +21,7 @@ type StepIndicatorProps = {
   className?: string;
 };
 
-const stepIcons: LucideIcon[] = [
+const stepIcons: IconComponent[] = [
   Mail,
   UserRound,
   UsersRound,

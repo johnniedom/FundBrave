@@ -7,6 +7,21 @@ const nextConfig: NextConfig = {
     "/": ["./packages/frontend/**/*"],
   },
   experimental: {},
+  // Allow external images from picsum.photos and unsplash for placeholder campaign images for now it still be deleted
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

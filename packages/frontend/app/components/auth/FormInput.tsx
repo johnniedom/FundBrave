@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import gsap from 'gsap';
+import { Mail, Lock, User } from '@/app/components/ui/icons';
 
 interface FormInputProps {
   id: string;
@@ -14,7 +16,14 @@ interface FormInputProps {
   error?: string;
   delay?: number;
   icon?: React.ReactNode;
+  className?: string;
 }
+
+const defaultIcons = {
+  password: <Lock className="h-5 w-5" />,
+  email: <Mail className="h-5 w-5" />,
+  text: <User className="h-5 w-5" />,
+};
 
 export default function FormInput({
   id,
@@ -27,41 +36,42 @@ export default function FormInput({
   error,
   delay = 0.9,
   icon,
+  className = "",
 }: FormInputProps) {
-  const defaultIcon = (
-    <svg
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      {type === 'password' ? (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-        />
-      ) : type === 'email' ? (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-        />
-      ) : (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      )}
-    </svg>
-  );
+  const displayIcon = icon || defaultIcons[type];
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const prevErrorRef = useRef<string | undefined>(undefined);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(inputContainerRef.current);
+    };
+  }, []);
+
+  // Shake animation when error appears
+  useEffect(() => {
+    // Only shake when error transitions from undefined/empty to having a value
+    if (error && !prevErrorRef.current && inputContainerRef.current) {
+      gsap.to(inputContainerRef.current, {
+        keyframes: [
+          { x: -10, duration: 0.07 },
+          { x: 10, duration: 0.07 },
+          { x: -8, duration: 0.07 },
+          { x: 8, duration: 0.07 },
+          { x: -4, duration: 0.07 },
+          { x: 4, duration: 0.07 },
+          { x: 0, duration: 0.07 },
+        ],
+        ease: "power2.inOut",
+      });
+    }
+    prevErrorRef.current = error;
+  }, [error]);
 
   return (
     <motion.div
+      className={className}
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ delay, duration: 0.4 }}
@@ -75,14 +85,14 @@ export default function FormInput({
       >
         {label}
       </motion.label>
-      <motion.div className="relative">
+      <motion.div ref={inputContainerRef} className="relative">
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: delay + 0.1, duration: 0.3 }}
-          className="absolute left-3 top-1/3 transform -translate-y-1/2 text-gray-400"
+          className="absolute left-3 top-1/3 transform -translate-y-1/2 text-muted-foreground"
         >
-          {icon || defaultIcon}
+          {displayIcon}
         </motion.div>
         <motion.input
           type={type}
@@ -91,10 +101,10 @@ export default function FormInput({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className={`w-full rounded-lg bg-gray-800/50 py-3 pl-12 pr-4 text-white placeholder-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 ${
+          className={`w-full rounded-lg bg-neutral-dark-400/50 py-3 pl-12 pr-4 text-white placeholder-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 ${
             error
-              ? 'border border-red-500 focus:ring-red-500'
-              : 'focus:ring-purple-500'
+              ? 'border border-destructive focus:ring-destructive'
+              : 'focus:ring-primary'
           }`}
           whileFocus={{ scale: 1.02 }}
         />
@@ -102,7 +112,7 @@ export default function FormInput({
       <AnimatePresence>
         {error && (
           <motion.p
-            className="mt-1 text-sm text-red-400"
+            className="mt-1 text-sm text-destructive"
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
@@ -115,3 +125,4 @@ export default function FormInput({
     </motion.div>
   );
 }
+

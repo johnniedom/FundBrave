@@ -28,7 +28,7 @@ const GenericStep: React.FC<GenericStepProps> = ({
       {onBack && (
         <motion.button 
           onClick={onBack} 
-          className="py-3 px-6 bg-slate-700 rounded-lg text-white font-semibold hover:bg-slate-600 transition-colors"
+          className="py-3 px-6 bg-secondary rounded-lg text-white font-semibold hover:bg-secondary/80 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -40,7 +40,7 @@ const GenericStep: React.FC<GenericStepProps> = ({
           onClick={onNext} 
           className="flex-1 py-3 rounded-lg text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all"
           style={{
-            background: "linear-gradient(97deg, #450CF0 0%, #CD82FF 100%)"
+            background: "linear-gradient(97deg, var(--primary-500) 0%, var(--soft-purple-500) 100%)"
           }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
