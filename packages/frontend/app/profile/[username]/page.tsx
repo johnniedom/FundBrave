@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import gsap from "gsap";
 import { Plus } from "@/app/components/ui/icons";
 import {
   ProfileHeader,
@@ -78,6 +79,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("campaigns");
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const { addPost } = usePosts();
+  const plusIconRef = useRef<SVGSVGElement>(null);
 
   const username = params.username as string;
 
@@ -91,6 +93,25 @@ export default function ProfilePage() {
     }
     setIsCreatePostOpen(false);
   };
+
+  // Handle create post button click with GSAP animation
+  const handleCreatePostClick = useCallback(() => {
+    if (plusIconRef.current) {
+      gsap.to(plusIconRef.current, {
+        rotation: "+=180",
+        scale: 1.2,
+        duration: 0.3,
+        ease: "back.out(1.7)",
+        onComplete: () => {
+          gsap.to(plusIconRef.current, {
+            scale: 1,
+            duration: 0.15,
+          });
+        },
+      });
+    }
+    setIsCreatePostOpen(true);
+  }, []);
 
   // If user not found, show not found page
   if (!user) {
@@ -182,11 +203,11 @@ export default function ProfilePage() {
 
       {/* Floating Create Post Button */}
       <button
-        onClick={() => setIsCreatePostOpen(true)}
+        onClick={handleCreatePostClick}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-primary-600 to-soft-purple-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center z-40"
         aria-label="Create post"
       >
-        <Plus size={24} />
+        <Plus ref={plusIconRef} size={24} />
       </button>
 
       {/* Create Post Modal */}

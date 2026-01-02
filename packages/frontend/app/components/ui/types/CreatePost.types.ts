@@ -4,10 +4,25 @@
 
 export type PostType = "post" | "campaign-update";
 
+// Audience types for post visibility
+export type AudienceType = "everyone" | "public" | "friends" | "private";
+
+export interface AudienceOption {
+  id: AudienceType;
+  label: string;
+  description?: string;
+}
+
 export interface UserProfile {
   name: string;
   avatar: string;
-  audience: string;
+  audience: AudienceType;
+}
+
+export interface CampaignOption {
+  id: string;
+  name: string;
+  category: string;
 }
 
 export interface PostData {
@@ -31,7 +46,7 @@ export interface CreatePostProps {
   onPublish: (data: PublishData) => void;
   user?: UserProfile;
   campaignCategories?: string[];
-  userCampaigns?: string[];
+  userCampaigns?: CampaignOption[];
 }
 
 export interface MediaActionsProps {
@@ -65,9 +80,10 @@ export interface CreateCampaignUpdateFormProps {
   onUpdateChange: (update: string) => void;
   onPublish: () => void;
   campaignCategories: string[];
-  userCampaigns: string[];
+  userCampaigns: CampaignOption[];
   isPublishing?: boolean;
   mediaActions?: MediaActionsProps;
+  errors?: CampaignUpdateFormErrors;
 }
 
 export interface CreatePostFormProps {
@@ -77,6 +93,7 @@ export interface CreatePostFormProps {
   onPublish: () => void;
   isPublishing?: boolean;
   mediaActions?: MediaActionsProps;
+  error?: string;
 }
 // Form Field Props Types
 export interface SelectFieldProps {
@@ -86,6 +103,8 @@ export interface SelectFieldProps {
   options: string[];
   placeholder?: string;
   required?: boolean;
+  error?: string;
+  disabled?: boolean;
 }
 
 export interface InputFieldProps {
@@ -94,6 +113,9 @@ export interface InputFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  error?: string;
+  maxLength?: number;
+  showCharacterCount?: boolean;
 }
 
 export interface TextAreaFieldProps {
@@ -108,4 +130,15 @@ export interface TextAreaFieldProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  error?: string;
+  maxLength?: number;
+  showCharacterCount?: boolean;
+  minLength?: number;
+}
+
+// Audience Dropdown Props
+export interface AudienceDropdownProps {
+  selectedAudience: AudienceType;
+  onAudienceChange: (audience: AudienceType) => void;
+  options: AudienceOption[];
 }

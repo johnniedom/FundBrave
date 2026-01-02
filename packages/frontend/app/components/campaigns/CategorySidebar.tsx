@@ -164,23 +164,21 @@ export default function CategorySidebar({
           {CATEGORIES.map((category) => {
             const isActive = activeCategory === category.id;
 
-            return (
+            const buttonContent = (
               <button
-                key={category.id}
                 onClick={() => handleCategoryClick(category.id)}
                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all duration-200 ${
                   isCollapsed ? "justify-center" : ""
                 } ${
                   isActive
-                    ? "bg-gradient-to-r from-primary-500 to-soft-purple-500 shadow-md"
+                    ? ""
                     : "hover:bg-white/5"
                 }`}
-                title={isCollapsed ? category.name : undefined}
               >
                 {/* Category Icon */}
                 <span
                   className={`flex-shrink-0 transition-colors ${
-                    isActive ? "text-white" : "text-white/70"
+                    isActive ? "text-primary-500" : "text-white/70"
                   }`}
                 >
                   {category.icon}
@@ -198,6 +196,8 @@ export default function CategorySidebar({
                 )}
               </button>
             );
+
+            return <div key={category.id}>{buttonContent}</div>;
           })}
         </div>
       </div>

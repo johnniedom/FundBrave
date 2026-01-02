@@ -1,16 +1,15 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import gsap from "gsap";
 import { ChevronDown } from "@/app/components/ui/icons";
 import { cn } from "@/lib/utils";
-import ReactRemoveScroll from "react-remove-scroll/dist/es5/Combination";
 import IconButton from "../icon-button";
-import motion from "motion";
 import type {
   MediaActionsProps,
   SelectFieldProps,
   InputFieldProps,
   TextAreaFieldProps,
 } from "../types/CreatePost.types";
-
 import {
   GifIcon,
   PollIcon,
@@ -19,6 +18,69 @@ import {
   Calendar,
   Smile,
 } from "../index";
+
+// FieldError Component
+interface FieldErrorProps {
+  error?: string;
+}
+
+const FieldError: React.FC<FieldErrorProps> = ({ error }) => (
+  <AnimatePresence>
+    {error && (
+      <motion.p
+        className="mt-1.5 text-sm text-destructive"
+        initial={{ opacity: 0, y: -5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.2 }}
+      >
+        {error}
+      </motion.p>
+    )}
+  </AnimatePresence>
+);
+
+// CharacterCount Component
+interface CharacterCountProps {
+  current: number;
+  max: number;
+  min?: number;
+}
+
+const CharacterCount: React.FC<CharacterCountProps> = ({ current, max, min }) => {
+  const countRef = useRef<HTMLSpanElement>(null);
+  const prevCurrentRef = useRef(current);
+
+  // Pulse animation when reaching 90% of max
+  useEffect(() => {
+    const wasBelow90 = prevCurrentRef.current < max * 0.9;
+    const isNowAbove90 = current >= max * 0.9;
+
+    if (wasBelow90 && isNowAbove90 && countRef.current) {
+      gsap.fromTo(countRef.current,
+        { scale: 1 },
+        { scale: 1.15, duration: 0.15, yoyo: true, repeat: 1, ease: "power2.out" }
+      );
+    }
+    prevCurrentRef.current = current;
+  }, [current, max]);
+
+  const isOverLimit = current > max;
+  const isBelowMin = min !== undefined && current > 0 && current < min;
+
+  return (
+    <span
+      ref={countRef}
+      className={cn(
+        "text-xs transition-colors",
+        isOverLimit ? "text-destructive" :
+        isBelowMin ? "text-yellow-500" : "text-white/40"
+      )}
+    >
+      {current}/{max}
+    </span>
+  );
+};
 
 // Media Actions Component
 const MediaActions: React.FC<MediaActionsProps> = ({
@@ -62,7 +124,52 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   options,
   placeholder = "Select",
   required = false,
+  error,
+  disabled = false,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const prevErrorRef = useRef<string | undefined>(undefined);
+  const prevValueRef = useRef(value);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(containerRef.current);
+      gsap.killTweensOf(selectRef.current);
+    };
+  }, []);
+
+  // Shake animation when error appears
+  useEffect(() => {
+    if (error && !prevErrorRef.current && containerRef.current) {
+      gsap.to(containerRef.current, {
+        keyframes: [
+          { x: -10, duration: 0.07 },
+          { x: 10, duration: 0.07 },
+          { x: -8, duration: 0.07 },
+          { x: 8, duration: 0.07 },
+          { x: -4, duration: 0.07 },
+          { x: 4, duration: 0.07 },
+          { x: 0, duration: 0.07 },
+        ],
+        ease: "power2.inOut",
+      });
+    }
+    prevErrorRef.current = error;
+  }, [error]);
+
+  // Subtle bounce on selection
+  useEffect(() => {
+    if (value && value !== prevValueRef.current && selectRef.current) {
+      gsap.fromTo(selectRef.current,
+        { scale: 1 },
+        { scale: 1.02, duration: 0.1, yoyo: true, repeat: 1, ease: "power2.out" }
+      );
+    }
+    prevValueRef.current = value;
+  }, [value]);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       onChange(e.target.value);
@@ -75,21 +182,26 @@ export const SelectField: React.FC<SelectFieldProps> = ({
       <label className="font-['Poppins'] font-medium text-[14px] sm:text-[16px] lg:text-[18px] text-white tracking-[0.72px] leading-[28px] sm:leading-[32px] lg:leading-[36px]">
         {label}
       </label>
-      <div className="relative">
+      <div ref={containerRef} className="relative">
         <select
+          ref={selectRef}
           value={value}
           onChange={handleChange}
           aria-label={label}
           required={required}
+          disabled={disabled}
           className={cn(
             "w-full bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
-            "px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-[18px]",
-            "h-12 sm:h-13 lg:h-14",
+            "pl-4 sm:pl-6 lg:pl-8 pr-10 sm:pr-12 lg:pr-14 py-4 sm:py-5 lg:py-5",
+            "min-h-[56px] sm:min-h-[60px] lg:min-h-[64px]",
             "font-['Poppins'] font-medium text-[14px] sm:text-[15px] lg:text-[16px]",
-            "tracking-[0.64px] leading-[28px] sm:leading-[32px] lg:leading-[36px]",
-            "text-white/60 appearance-none cursor-pointer outline-none",
+            "tracking-[0.64px] leading-normal",
+            "text-white appearance-none cursor-pointer outline-none",
             "focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50",
-            "transition-all duration-200"
+            "transition-all duration-200",
+            error && "ring-2 ring-destructive/50",
+            disabled && "opacity-50 cursor-not-allowed",
+            "[&>option]:bg-neutral-dark-400 [&>option]:text-white [&>option]:py-2"
           )}
         >
           <option value="">{placeholder}</option>
@@ -104,6 +216,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
           className="absolute right-4 sm:right-6 lg:right-8 top-1/2 -translate-y-1/2 text-white/60 pointer-events-none"
         />
       </div>
+      <FieldError error={error} />
     </div>
   );
 };
@@ -115,7 +228,62 @@ export const InputField: React.FC<InputFieldProps> = ({
   onChange,
   placeholder = "",
   required = false,
+  error,
+  maxLength,
+  showCharacterCount = false,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prevErrorRef = useRef<string | undefined>(undefined);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(containerRef.current);
+      gsap.killTweensOf(inputRef.current);
+    };
+  }, []);
+
+  // Shake animation when error appears
+  useEffect(() => {
+    if (error && !prevErrorRef.current && containerRef.current) {
+      gsap.to(containerRef.current, {
+        keyframes: [
+          { x: -10, duration: 0.07 },
+          { x: 10, duration: 0.07 },
+          { x: -8, duration: 0.07 },
+          { x: 8, duration: 0.07 },
+          { x: -4, duration: 0.07 },
+          { x: 4, duration: 0.07 },
+          { x: 0, duration: 0.07 },
+        ],
+        ease: "power2.inOut",
+      });
+    }
+    prevErrorRef.current = error;
+  }, [error]);
+
+  // Focus/blur glow animation
+  const handleFocus = useCallback(() => {
+    if (inputRef.current) {
+      gsap.to(inputRef.current, {
+        boxShadow: "0 0 0 2px rgba(139, 92, 246, 0.5)",
+        duration: 0.2,
+        ease: "power2.out",
+      });
+    }
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    if (inputRef.current) {
+      gsap.to(inputRef.current, {
+        boxShadow: "none",
+        duration: 0.2,
+        ease: "power2.out",
+      });
+    }
+  }, []);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       onChange(e.target.value);
@@ -125,26 +293,39 @@ export const InputField: React.FC<InputFieldProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="font-['Poppins'] font-medium text-[14px] sm:text-[16px] lg:text-[18px] text-white tracking-[0.72px] leading-[28px] sm:leading-[32px] lg:leading-[36px]">
-        {label}
-      </label>
-      <input
-        type="text"
-        value={value}
-        onChange={handleChange}
-        placeholder={placeholder}
-        required={required}
-        className={cn(
-          "w-full bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
-          "px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-[18px]",
-          "h-12 sm:h-13 lg:h-14",
-          "font-['Poppins'] font-medium text-[14px] sm:text-[15px] lg:text-[16px]",
-          "tracking-[0.64px] leading-[28px] sm:leading-[32px] lg:leading-[36px]",
-          "text-white placeholder:text-white/60 outline-none",
-          "focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50",
-          "transition-all duration-200"
+      <div className="flex items-center justify-between">
+        <label className="font-['Poppins'] font-medium text-[14px] sm:text-[16px] lg:text-[18px] text-white tracking-[0.72px] leading-[28px] sm:leading-[32px] lg:leading-[36px]">
+          {label}
+        </label>
+        {showCharacterCount && maxLength && (
+          <CharacterCount current={value.length} max={maxLength} />
         )}
-      />
+      </div>
+      <div ref={containerRef}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          required={required}
+          maxLength={maxLength}
+          className={cn(
+            "w-full bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
+            "px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-[18px]",
+            "h-12 sm:h-13 lg:h-14",
+            "font-['Poppins'] font-medium text-[14px] sm:text-[15px] lg:text-[16px]",
+            "tracking-[0.64px] leading-[28px] sm:leading-[32px] lg:leading-[36px]",
+            "text-white placeholder:text-white/60 outline-none",
+            "focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50",
+            "transition-all duration-200",
+            error && "ring-2 ring-destructive/50"
+          )}
+        />
+      </div>
+      <FieldError error={error} />
     </div>
   );
 };
@@ -158,7 +339,40 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
   showMediaActions = true,
   required = false,
   mediaActions,
+  error,
+  maxLength,
+  showCharacterCount = false,
+  minLength,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevErrorRef = useRef<string | undefined>(undefined);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(containerRef.current);
+    };
+  }, []);
+
+  // Shake animation when error appears
+  useEffect(() => {
+    if (error && !prevErrorRef.current && containerRef.current) {
+      gsap.to(containerRef.current, {
+        keyframes: [
+          { x: -10, duration: 0.07 },
+          { x: 10, duration: 0.07 },
+          { x: -8, duration: 0.07 },
+          { x: 8, duration: 0.07 },
+          { x: -4, duration: 0.07 },
+          { x: 4, duration: 0.07 },
+          { x: 0, duration: 0.07 },
+        ],
+        ease: "power2.inOut",
+      });
+    }
+    prevErrorRef.current = error;
+  }, [error]);
+
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       onChange(e.target.value);
@@ -183,20 +397,23 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {ReactRemoveScroll && (
-        <ReactRemoveScroll>
-          <label className="font-['Poppins'] font-medium text-[14px] sm:text-[16px] lg:text-[18px] text-white tracking-[0.72px] leading-[28px] sm:leading-[32px] lg:leading-[36px]">
-            {label}
-          </label>
-        </ReactRemoveScroll>
-      )}
+      <div className="flex items-center justify-between">
+        <label className="font-['Poppins'] font-medium text-[14px] sm:text-[16px] lg:text-[18px] text-white tracking-[0.72px] leading-[28px] sm:leading-[32px] lg:leading-[36px]">
+          {label}
+        </label>
+        {showCharacterCount && maxLength && (
+          <CharacterCount current={value.length} max={maxLength} min={minLength} />
+        )}
+      </div>
       <div
+        ref={containerRef}
         className={cn(
           "bg-neutral-dark-400 rounded-[12px] sm:rounded-[16px] lg:rounded-[20px]",
           "p-4 sm:p-6 lg:p-8 flex flex-col justify-between",
           "focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-opacity-50",
           "transition-all duration-200",
-          minHeightClass
+          minHeightClass,
+          error && "ring-2 ring-destructive/50"
         )}
         {...(Object.keys(containerStyle).length > 0 && {
           style: containerStyle,
@@ -207,6 +424,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
           onChange={handleChange}
           placeholder={placeholder}
           required={required}
+          maxLength={maxLength}
           className={cn(
             "bg-transparent text-white/60 font-['Poppins'] font-medium",
             "text-[14px] sm:text-[15px] lg:text-[16px] tracking-[0.64px]",
@@ -216,6 +434,7 @@ export const TextAreaField: React.FC<TextAreaFieldProps> = ({
         />
         {showMediaActions && mediaActions && <MediaActions {...mediaActions} />}
       </div>
+      <FieldError error={error} />
     </div>
   );
 };

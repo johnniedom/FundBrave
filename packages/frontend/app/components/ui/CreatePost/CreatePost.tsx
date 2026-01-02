@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useRef, useCallback, useEffect } from "react";
+import { RemoveScroll } from "react-remove-scroll";
 import gsap from "gsap";
-import { X, ChevronDown } from "@/app/components/ui/icons";
+import { X } from "@/app/components/ui/icons";
 import { Button } from "../button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -11,6 +12,7 @@ import ModalBackdrop from "../../common/ModalBackdrop";
 // Import form components
 import { SelectField, InputField, TextAreaField } from "../form/FormFields";
 import TabNavigation from "../TabNavigation";
+import AudienceDropdown from "./AudienceDropdown";
 // Imports from separated files
 import type {
   UserProfile,
@@ -18,6 +20,7 @@ import type {
   MediaActionsProps,
   CreateCampaignUpdateFormProps,
   CreatePostFormProps,
+  AudienceType,
 } from "../types/CreatePost.types";
 
 import {
@@ -25,6 +28,7 @@ import {
   DEFAULT_CAMPAIGN_CATEGORIES,
   DEFAULT_USER_CAMPAIGNS,
   FORM_DIMENSIONS,
+  AUDIENCE_OPTIONS,
 } from "../constants/CreatePost.constants";
 
 import { useCreatePost } from "../hooks/useCreatePost";
@@ -32,6 +36,7 @@ import {
   validatePostForm,
   validateCampaignUpdateForm,
   isFormValid,
+  VALIDATION_LIMITS,
 } from "../../../../lib/validation.utils";
 
 /**
@@ -44,14 +49,16 @@ import {
 // User Profile Component
 interface UserProfileHeaderProps {
   user: UserProfile;
-  onAudienceClick?: () => void;
+  selectedAudience: AudienceType;
+  onAudienceChange: (audience: AudienceType) => void;
 }
 
 const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   user,
-  onAudienceClick,
+  selectedAudience,
+  onAudienceChange,
 }) => (
-  <div className="flex items-center gap-2 pr-8">
+  <div className="flex items-center gap-3 pr-8">
     <div className="w-[32px] h-[32px] sm:w-[42px] sm:h-[42px] rounded-full overflow-hidden flex-shrink-0">
       <Image
         src={user.avatar}
@@ -61,19 +68,15 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
         className="w-full h-full object-cover"
       />
     </div>
-    <div className="flex flex-col gap-0.5 min-w-0">
+    <div className="flex flex-col gap-1 min-w-0">
       <div className="font-['Poppins'] font-medium text-[12px] sm:text-[14px] text-white tracking-[0.24px] truncate">
         {user.name}
       </div>
-      <button
-        onClick={onAudienceClick}
-        className="flex items-center gap-0.5 hover:text-white/80 transition-colors w-fit"
-      >
-        <span className="font-['Poppins'] text-[10px] sm:text-[12px] text-white/60 tracking-[0.48px]">
-          {user.audience}
-        </span>
-        <ChevronDown size={14} className="text-white/60 flex-shrink-0" />
-      </button>
+      <AudienceDropdown
+        selectedAudience={selectedAudience}
+        onAudienceChange={onAudienceChange}
+        options={AUDIENCE_OPTIONS}
+      />
     </div>
   </div>
 );
@@ -86,6 +89,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({
   onPublish,
   isPublishing = false,
   mediaActions,
+  error,
 }) => {
   const errors = validatePostForm(content);
   const isValid = isFormValid(errors);
@@ -99,6 +103,10 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({
         placeholder="What do you want to talk about?"
         minHeight={FORM_DIMENSIONS.DEFAULT_TEXTAREA_HEIGHT}
         mediaActions={mediaActions}
+        error={error}
+        maxLength={VALIDATION_LIMITS.POST_CONTENT_MAX}
+        minLength={VALIDATION_LIMITS.POST_CONTENT_MIN}
+        showCharacterCount
       />
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -143,18 +151,22 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
   userCampaigns,
   isPublishing = false,
   mediaActions,
+  errors,
 }) => {
-  const errors = validateCampaignUpdateForm({
+  const validationErrors = validateCampaignUpdateForm({
     category,
     campaign,
     title,
     update,
   });
-  const isValid = isFormValid(errors);
+  const isValid = isFormValid(validationErrors);
 
   const updatePlaceholder = campaign
     ? `What's the update on ${campaign}?`
     : "What's the update?";
+
+  // Convert campaign options to string array for SelectField
+  const campaignOptions = userCampaigns.map((c) => c.name);
 
   return (
     <div className={cn("flex flex-col gap-7", "w-full max-w-[554px]")}>
@@ -166,15 +178,18 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
           options={campaignCategories}
           placeholder="Select category"
           required
+          error={errors?.category}
         />
 
         <SelectField
           label="Campaign"
           value={campaign}
           onChange={onCampaignChange}
-          options={userCampaigns}
-          placeholder="Select campaign"
+          options={campaignOptions}
+          placeholder={category ? "Select campaign" : "Select a category first"}
           required
+          error={errors?.campaign}
+          disabled={!category}
         />
 
         <InputField
@@ -183,6 +198,9 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
           onChange={onTitleChange}
           placeholder="Update title"
           required
+          error={errors?.title}
+          maxLength={VALIDATION_LIMITS.TITLE_MAX}
+          showCharacterCount
         />
 
         <TextAreaField
@@ -193,6 +211,10 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
           minHeight={FORM_DIMENSIONS.CAMPAIGN_UPDATE_TEXTAREA_HEIGHT}
           required
           mediaActions={mediaActions}
+          error={errors?.update}
+          maxLength={VALIDATION_LIMITS.UPDATE_CONTENT_MAX}
+          minLength={VALIDATION_LIMITS.UPDATE_CONTENT_MIN}
+          showCharacterCount
         />
       </div>
 
@@ -224,6 +246,8 @@ const CreatePost: React.FC<CreatePostProps> = ({
     activeTab,
     setActiveTab,
     isPublishing,
+    audience,
+    setAudience,
     postContent,
     setPostContent,
     campaignCategory,
@@ -236,7 +260,10 @@ const CreatePost: React.FC<CreatePostProps> = ({
     setCampaignUpdate,
     handlePublish,
     handleRewriteWithAI,
-  } = useCreatePost(onPublish, onClose);
+    filteredCampaigns,
+    postFormErrors,
+    campaignUpdateFormErrors,
+  } = useCreatePost(onPublish, onClose, userCampaigns);
 
   // GSAP refs
   const closeRef = useRef<SVGSVGElement>(null);
@@ -280,17 +307,18 @@ const CreatePost: React.FC<CreatePostProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <ModalBackdrop onClose={onClose} />
+    <RemoveScroll>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <ModalBackdrop onClose={onClose} />
 
-      {/* Modal */}
-      <div
-        className={cn(
-          "relative bg-[#09011A] rounded-[20px] w-full",
-          "max-w-[360px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px]",
-          "max-h-[90vh] overflow-hidden"
-        )}
-      >
+        {/* Modal */}
+        <div
+          className={cn(
+            "relative bg-[#09011A] rounded-[20px] w-full",
+            "max-w-[360px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[900px]",
+            "max-h-[90vh] overflow-hidden"
+          )}
+        >
         {/* Header */}
         <div className={cn("relative pb-0", "p-4 sm:p-6 lg:p-[37px]")}>
           {/* Close Button */}
@@ -311,7 +339,11 @@ const CreatePost: React.FC<CreatePostProps> = ({
             <X ref={closeRef} size={16} />
           </button>
 
-          <UserProfileHeader user={user} />
+          <UserProfileHeader
+            user={user}
+            selectedAudience={audience}
+            onAudienceChange={setAudience}
+          />
         </div>
 
         <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
@@ -322,7 +354,8 @@ const CreatePost: React.FC<CreatePostProps> = ({
             "pb-4 sm:pb-6 lg:pb-[37px] overflow-y-auto",
             "px-4 sm:px-8 md:px-16 lg:px-24 xl:px-[142px]",
             "max-h-[calc(90vh-240px)]",
-            "flex justify-center"
+            "flex justify-center",
+            "scrollbar-auto-hide"
           )}
         >
           {activeTab === "post" ? (
@@ -333,6 +366,7 @@ const CreatePost: React.FC<CreatePostProps> = ({
               onPublish={handlePublish}
               isPublishing={isPublishing}
               mediaActions={mediaActions}
+              error={postFormErrors.content}
             />
           ) : (
             <CreateCampaignUpdateForm
@@ -346,14 +380,16 @@ const CreatePost: React.FC<CreatePostProps> = ({
               onUpdateChange={setCampaignUpdate}
               onPublish={handlePublish}
               campaignCategories={campaignCategories}
-              userCampaigns={userCampaigns}
+              userCampaigns={filteredCampaigns}
               isPublishing={isPublishing}
               mediaActions={mediaActions}
+              errors={campaignUpdateFormErrors}
             />
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </RemoveScroll>
   );
 };
 
