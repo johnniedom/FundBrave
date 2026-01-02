@@ -1,26 +1,21 @@
 'use client';
 import React from 'react';
 import { motion } from "motion/react";
+import { Spinner } from "@/app/components/ui/Spinner";
+
 interface SocialLoginButtonsProps {
   onGoogleLogin: () => void;
   onXLogin: () => void;
   delay?: number;
   isGoogleLoading?: boolean;
   isXLoading?: boolean;
+  className?: string;
 }
 
 const buttonVariants = {
   hover: { scale: 1.02, transition: { duration: 0.2 } },
   tap: { scale: 0.98 },
 };
-
-const LoadingSpinner = () => (
-  <motion.div
-    className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-    animate={{ rotate: 360 }}
-    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-  />
-);
 
 export default function SocialLoginButtons({
   onGoogleLogin,
@@ -45,7 +40,7 @@ export default function SocialLoginButtons({
         whileTap={!isGoogleLoading && !isXLoading ? "tap" : undefined}
       >
         {isGoogleLoading ? (
-          <LoadingSpinner />
+          <Spinner size="md" color="white" />
         ) : (
           <motion.svg
             width="24"
@@ -86,7 +81,7 @@ export default function SocialLoginButtons({
         whileTap={!isGoogleLoading && !isXLoading ? "tap" : undefined}
       >
         {isXLoading ? (
-          <LoadingSpinner />
+          <Spinner size="md" color="white" />
         ) : (
           <motion.svg
             className="h-5 w-5"

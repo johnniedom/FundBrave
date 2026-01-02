@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/app/components/ui/icons";
 import { cn } from "@/lib/utils";
 import ReactRemoveScroll from "react-remove-scroll/dist/es5/Combination";
 import IconButton from "../icon-button";

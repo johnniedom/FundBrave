@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus } from "@/app/components/ui/icons";
 import {
   ProfileHeader,
   ProfileTabs,

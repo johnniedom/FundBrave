@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import gsap from "gsap";
 import { cn } from "@/lib/utils";
 import { CampaignDetail } from "@/app/campaigns/data";
-import { MessageSquare, FileText, Bell } from "lucide-react";
+import { MessageCircle, FileText, Bell } from "@/app/components/ui/icons";
 
 interface CampaignTabsProps {
   campaign: CampaignDetail;
@@ -13,6 +14,27 @@ export default function CampaignTabs({ campaign }: CampaignTabsProps) {
   const [activeTab, setActiveTab] = useState<"story" | "updates" | "comments">(
     "story"
   );
+
+  // GSAP refs
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(contentRef.current);
+    };
+  }, []);
+
+  // Animate content on tab change
+  useEffect(() => {
+    if (contentRef.current) {
+      gsap.fromTo(
+        contentRef.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }
+      );
+    }
+  }, [activeTab]);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -60,7 +82,7 @@ export default function CampaignTabs({ campaign }: CampaignTabsProps) {
               : "text-white/60 hover:text-white/80"
           )}
         >
-          <MessageSquare size={18} />
+          <MessageCircle size={18} />
           Comments
           <span className="bg-white/10 text-white/80 text-xs px-2 py-0.5 rounded-full ml-1">
             {campaign.comments.length}
@@ -72,7 +94,7 @@ export default function CampaignTabs({ campaign }: CampaignTabsProps) {
       </div>
 
       {/* Tab Content */}
-      <div className="py-4">
+      <div ref={contentRef} className="py-4">
         {activeTab === "story" && (
           <div className="prose prose-invert max-w-none">
             <div className="text-white/80 whitespace-pre-line leading-relaxed">

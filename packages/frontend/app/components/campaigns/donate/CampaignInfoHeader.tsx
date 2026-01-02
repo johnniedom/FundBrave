@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { TrendingUp, Shield } from "lucide-react";
+import { TrendingUp, Shield } from "@/app/components/ui/icons";
 import type { CampaignInfoHeaderProps } from "@/types/donation";
 
 /**

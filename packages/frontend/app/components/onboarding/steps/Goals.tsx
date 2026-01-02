@@ -11,7 +11,7 @@ import {
   Globe,
   Sparkles,
   Check,
-} from "lucide-react";
+} from "@/app/components/ui/icons";
 import OnboardingNavButtons from "@/app/components/onboarding/OnboardingNavButtons";
 
 interface GoalOption {

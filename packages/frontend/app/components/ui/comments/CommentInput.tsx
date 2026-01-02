@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, KeyboardEvent } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2 } from "@/app/components/ui/icons";
 import { TextAreaField } from "@/app/components/ui/form/FormFields";
 import { cn } from "@/lib/utils";
 

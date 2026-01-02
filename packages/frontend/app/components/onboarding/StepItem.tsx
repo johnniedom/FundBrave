@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { Check } from "lucide-react";
+import { Check } from "@/app/components/ui/icons";
 import { ComponentType } from "react";
 
 type StepStatus = "completed" | "active" | "inactive" | "next";

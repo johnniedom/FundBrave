@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import gsap from "gsap";
 import Link from "next/link";
-import { Share2, Bell, Calendar } from "lucide-react";
+import { Share2, Bell, CalendarIcon } from "@/app/components/ui/icons";
 import ShareCampaignModal from "@/app/components/ui/ShareCampaignModal";
 import AddReminderModal from "@/app/components/ui/AddReminderModal";
+import { Button } from "@/app/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface CampaignData {
@@ -50,6 +52,49 @@ export default function CampaignActionBar({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
 
+  // GSAP refs for icon animations
+  const shareRef = useRef<SVGSVGElement>(null);
+  const bellRef = useRef<SVGSVGElement>(null);
+  const calendarRef = useRef<SVGSVGElement>(null);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf([shareRef.current, bellRef.current, calendarRef.current]);
+    };
+  }, []);
+
+  // Share icon bounce animation
+  const animateShare = useCallback(() => {
+    if (!shareRef.current) return;
+    gsap.timeline()
+      .to(shareRef.current, { y: -3, duration: 0.15, ease: "power2.out" })
+      .to(shareRef.current, { y: 0, duration: 0.3, ease: "bounce.out" });
+  }, []);
+
+  // Bell icon ring/shake animation
+  const animateBell = useCallback(() => {
+    if (!bellRef.current) return;
+    gsap.to(bellRef.current, {
+      rotation: 15,
+      duration: 0.1,
+      yoyo: true,
+      repeat: 5,
+      ease: "power1.inOut",
+      onComplete: () => {
+        gsap.set(bellRef.current, { rotation: 0 });
+      },
+    });
+  }, []);
+
+  // Calendar icon bounce animation
+  const animateCalendar = useCallback(() => {
+    if (!calendarRef.current) return;
+    gsap.timeline()
+      .to(calendarRef.current, { scale: 1.2, duration: 0.15, ease: "power2.out" })
+      .to(calendarRef.current, { scale: 1, duration: 0.3, ease: "elastic.out(1, 0.5)" });
+  }, []);
+
   const campaignUrl =
     campaign.url || `https://fundbrave.com/campaigns/${campaign.id}`;
   const campaignEndDate = campaign.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default 30 days from now
@@ -62,26 +107,41 @@ export default function CampaignActionBar({
     onReminderSet?.(provider);
   };
 
+  const handleShareClick = () => {
+    animateShare();
+    setIsShareModalOpen(true);
+  };
+
+  const handleReminderClick = () => {
+    animateBell();
+    setIsReminderModalOpen(true);
+  };
+
+  const handleCalendarClick = () => {
+    animateCalendar();
+    setIsReminderModalOpen(true);
+  };
+
   // Render based on variant
   if (variant === "icons") {
     return (
       <>
         <div className={cn("flex items-center gap-2", className)}>
           <button
-            onClick={() => setIsShareModalOpen(true)}
+            onClick={handleShareClick}
             className="p-2 rounded-full text-white/50 hover:text-primary hover:bg-primary/10 transition-colors"
             aria-label="Share campaign"
             title="Share"
           >
-            <Share2 size={18} />
+            <Share2 ref={shareRef} size={18} />
           </button>
           <button
-            onClick={() => setIsReminderModalOpen(true)}
+            onClick={handleReminderClick}
             className="p-2 rounded-full text-white/50 hover:text-primary hover:bg-primary/10 transition-colors"
             aria-label="Set reminder"
             title="Set reminder"
           >
-            <Bell size={18} />
+            <Bell ref={bellRef} size={18} />
           </button>
         </div>
 
@@ -116,17 +176,17 @@ export default function CampaignActionBar({
           )}
         >
           <button
-            onClick={() => setIsShareModalOpen(true)}
+            onClick={handleShareClick}
             className="flex items-center gap-1.5 hover:text-primary transition-colors"
           >
-            <Share2 size={14} />
+            <Share2 ref={shareRef} size={14} />
             <span>Share</span>
           </button>
           <button
-            onClick={() => setIsReminderModalOpen(true)}
+            onClick={handleCalendarClick}
             className="flex items-center gap-1.5 hover:text-primary transition-colors"
           >
-            <Calendar size={14} />
+            <CalendarIcon ref={calendarRef} size={14} />
             <span>Remind</span>
           </button>
         </div>
@@ -152,36 +212,29 @@ export default function CampaignActionBar({
     );
   }
 
-  // Default: buttons variant
+  // Default: buttons variant - Donate + Share side by side
   return (
     <>
       <div
         className={cn(
-          "flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 w-full",
+          "flex flex-row items-center gap-4 w-full",
           className
         )}
       >
         {showDonate && (
-          <Link href={`/campaigns/${campaign.id}/donate`} className="flex-1">
-            <button className="w-full h-12 sm:h-14 rounded-full bg-gradient-to-r from-primary-600 to-soft-purple-500 text-white font-bold text-sm sm:text-base tracking-wide hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all transform hover:scale-[1.01]">
-              Donate
-            </button>
-          </Link>
+          <Button asChild variant="primary" size="lg" className="flex-1">
+            <Link href={`/campaigns/${campaign.id}/donate`}>Donate</Link>
+          </Button>
         )}
-        <button
-          onClick={() => setIsShareModalOpen(true)}
-          className="flex-1 h-12 sm:h-14 rounded-full border border-border-subtle text-white font-bold text-sm sm:text-base tracking-wide hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={handleShareClick}
+          className="flex-1 gap-2"
         >
-          <Share2 size={18} />
+          <Share2 ref={shareRef} size={18} />
           Share
-        </button>
-        <button
-          onClick={() => setIsReminderModalOpen(true)}
-          className="flex-1 h-12 sm:h-14 rounded-full border border-border-subtle text-white font-bold text-sm sm:text-base tracking-wide hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-        >
-          <Calendar size={18} />
-          Remind Me
-        </button>
+        </Button>
       </div>
 
       {/* Modals */}

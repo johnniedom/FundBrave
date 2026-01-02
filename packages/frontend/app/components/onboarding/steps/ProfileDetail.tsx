@@ -3,7 +3,7 @@
 import React from "react";
 import { StepComponentProps } from "@/lib/onboarding-steps";
 import { motion } from "motion/react";
-import { User, Mail } from "lucide-react";
+import { User, Mail } from "@/app/components/ui/icons";
 import { DatePicker } from "@/app/components/ui/date-picker";
 import { useProfileForm } from "@/app/components/ui/hooks/useProfileForm";
 import AvatarUploader from "@/app/components/ui/form/AvatarUploader";

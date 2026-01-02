@@ -4,7 +4,7 @@ import React, { useState, useRef } from "react";
 import { motion } from "motion/react";
 import { StepComponentProps } from "@/lib/onboarding-steps";
 import { useOnboardingData } from "@/app/provider/OnboardingDataContext";
-import GradientButton from "@/app/components/common/GradientButton";
+import { Button } from "@/app/components/ui/button";
 
 const VerifyEmail: React.FC<StepComponentProps> = ({ onNext }) => {
   const { data } = useOnboardingData();
@@ -76,9 +76,9 @@ const VerifyEmail: React.FC<StepComponentProps> = ({ onNext }) => {
         </button>
       </p>
 
-      <GradientButton onClick={onNext} className="w-full max-w-xs mx-auto">
+      <Button variant="primary" size="md" onClick={onNext} className="w-full max-w-xs mx-auto">
         Continue
-      </GradientButton>
+      </Button>
     </motion.div>
   );
 };

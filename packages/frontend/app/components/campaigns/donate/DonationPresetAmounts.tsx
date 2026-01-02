@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check } from "@/app/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { DonationPresetAmountsProps } from "@/types/donation";
 

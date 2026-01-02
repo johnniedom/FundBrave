@@ -1,6 +1,6 @@
 "use client";
 
-import { Wallet, Loader2, Sparkles } from "lucide-react";
+import { Wallet, Loader2, Sparkles } from "@/app/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { WalletConnectionProps } from "@/types/donation";
 

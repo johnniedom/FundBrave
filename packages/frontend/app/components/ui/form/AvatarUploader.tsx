@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import { motion } from "motion/react";
-import { Upload as UploadIcon, X } from "lucide-react";
+import { UploadIcon, X } from "@/app/components/ui/icons";
 
 interface AvatarUploaderProps {
   avatarPreview: string | null;

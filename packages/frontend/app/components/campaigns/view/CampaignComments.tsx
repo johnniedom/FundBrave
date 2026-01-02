@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle } from "@/app/components/ui/icons";
 import { Comment } from "@/app/campaigns/data";
 
 interface CampaignCommentsProps {

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/app/components/ui/icons";
 
 interface OnboardingNavButtonsProps {
   onBack?: () => void;

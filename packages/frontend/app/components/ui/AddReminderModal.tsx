@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X } from "lucide-react";
+import { X } from "@/app/components/ui/icons";
 import { RemoveScroll } from "react-remove-scroll";
 import {
   AppleIcon,
@@ -9,7 +9,7 @@ import {
   OutlookIcon,
   OutlookWebIcon,
   YahooIcon,
-} from "./icons";
+} from "./providerIcons";
 import {
   createCampaignReminderEvent,
   openCalendar,

@@ -14,7 +14,7 @@ import SocialLoginButtons from "../../components/auth/SocialLoginButtons";
 import AuthDivider from "../../components/auth/AuthDivider";
 import ServerError from "../../components/auth/ServerError";
 import FormInput from "../../components/auth/FormInput";
-import LoadingButton from "../../components/auth/LoadingButton";
+import { Button } from "../../components/ui/button";
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 interface LoginPageProps {
@@ -226,17 +226,19 @@ export default function LoginPage({ onToggle }: LoginPageProps) {
             </motion.div>
           </motion.div>
 
-          <LoadingButton
+          <Button
             type="submit"
-            isLoading={isSubmitting}
+            loading={isSubmitting}
             disabled={
               isSubmitting || isOAuthLoading.google || isOAuthLoading.twitter
             }
             loadingText="Logging in..."
-            delay={1.2}
+            variant="primary"
+            size="md"
+            fullWidth
           >
             Login
-          </LoadingButton>
+          </Button>
         </motion.form>
 
         {/* Sign Up Link */}

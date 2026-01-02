@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { PartyPopper } from "lucide-react";
+import { PartyPopper } from "@/app/components/ui/icons";
 import { StepComponentProps } from "@/lib/onboarding-steps";
 import { useRouter } from "next/navigation";
 import { useOnboardingData } from "@/app/provider/OnboardingDataContext";

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import gsap from "gsap";
 import {
   Heart,
   GraduationCap,
@@ -23,7 +24,7 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react";
+} from "@/app/components/ui/icons";
 
 // Category item type definition
 export interface Category {
@@ -79,11 +80,53 @@ export default function CategorySidebar({
 }: CategorySidebarProps) {
   const [activeCategory, setActiveCategory] = useState(selectedCategory);
 
-  // Handle category selection
-  const handleCategoryClick = (categoryId: string) => {
+  // GSAP refs
+  const chevronLeftRef = useRef<SVGSVGElement>(null);
+  const chevronRightRef = useRef<SVGSVGElement>(null);
+  const categoriesRef = useRef<HTMLDivElement>(null);
+  const hasAnimatedRef = useRef(false);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf([chevronLeftRef.current, chevronRightRef.current]);
+      if (categoriesRef.current) {
+        const buttons = categoriesRef.current.querySelectorAll("button");
+        gsap.killTweensOf(buttons);
+      }
+    };
+  }, []);
+
+  // Animate chevron rotation on collapse toggle
+  useEffect(() => {
+    const chevron = isCollapsed ? chevronRightRef.current : chevronLeftRef.current;
+    if (chevron) {
+      gsap.fromTo(
+        chevron,
+        { rotation: -90, scale: 0.8 },
+        { rotation: 0, scale: 1, duration: 0.3, ease: "power2.out" }
+      );
+    }
+  }, [isCollapsed]);
+
+  // Stagger categories on initial mount
+  useEffect(() => {
+    if (categoriesRef.current && !hasAnimatedRef.current) {
+      const buttons = categoriesRef.current.querySelectorAll("button");
+      gsap.fromTo(
+        buttons,
+        { opacity: 0, x: -10 },
+        { opacity: 1, x: 0, stagger: 0.03, duration: 0.3, ease: "power2.out" }
+      );
+      hasAnimatedRef.current = true;
+    }
+  }, []);
+
+  // Handle category selection with animation
+  const handleCategoryClick = useCallback((categoryId: string) => {
     setActiveCategory(categoryId);
     onCategorySelect?.(categoryId);
-  };
+  }, [onCategorySelect]);
 
   return (
     <aside
@@ -103,7 +146,7 @@ export default function CategorySidebar({
               className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
               aria-label="Collapse sidebar"
             >
-              <ChevronLeft size={18} className="text-white/60" />
+              <ChevronLeft ref={chevronLeftRef} size={18} className="text-white/60" />
             </button>
           </div>
         ) : (
@@ -112,12 +155,12 @@ export default function CategorySidebar({
             className="flex items-center justify-center p-2 rounded-lg hover:bg-white/5 transition-colors mx-auto"
             aria-label="Expand sidebar"
           >
-            <ChevronRight size={18} className="text-white/60" />
+            <ChevronRight ref={chevronRightRef} size={18} className="text-white/60" />
           </button>
         )}
 
         {/* Categories List */}
-        <div className="flex flex-col gap-1">
+        <div ref={categoriesRef} className="flex flex-col gap-1">
           {CATEGORIES.map((category) => {
             const isActive = activeCategory === category.id;
 

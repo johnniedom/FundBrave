@@ -1,8 +1,10 @@
 "use client";
 
-import { Calendar } from "lucide-react";
+import { useState } from "react";
+import { CalendarIcon, Share2 } from "@/app/components/ui/icons";
 import Link from "next/link";
-import { CampaignActionBar } from "@/app/components/campaigns";
+import { Button } from "@/app/components/ui/button";
+import ShareCampaignModal from "@/app/components/ui/ShareCampaignModal";
 
 interface CampaignData {
   id: string;
@@ -27,6 +29,8 @@ export default function CampaignStatsCard({
   daysLeft,
   campaign,
 }: CampaignStatsCardProps) {
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   const percentage = Math.min(
     Math.round((amountRaised / targetAmount) * 100),
     100
@@ -37,6 +41,9 @@ export default function CampaignStatsCard({
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  const campaignUrl =
+    campaign.url || `https://fundbrave.com/campaigns/${campaign.id}`;
 
   return (
     <div className="flex flex-col gap-8">
@@ -105,31 +112,44 @@ export default function CampaignStatsCard({
           </p>
         </div>
 
-        {/* Action Buttons - Using CampaignActionBar */}
+        {/* Action Buttons - Matching reference design */}
         <div className="flex flex-col gap-3 sm:gap-4 w-full">
-          <Link href={`/campaigns/${campaign.id}/donate`} className="w-full">
-            <button className="w-full h-11 sm:h-12 rounded-full bg-gradient-to-r from-primary-600 to-soft-purple-500 text-white font-semibold text-sm sm:text-base tracking-wide hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] transition-all transform hover:scale-[1.02]">
-              Donate Now
-            </button>
-          </Link>
-          <CampaignActionBar
-            campaign={campaign}
-            variant="buttons"
-            showDonate={false}
-          />
+          {/* Donate Now - Primary gradient button */}
+          <Button asChild variant="primary" size="lg" fullWidth>
+            <Link href={`/campaigns/${campaign.id}/donate`}>Donate Now</Link>
+          </Button>
+          {/* Share - Outline button with icon */}
+          <Button
+            variant="outline"
+            size="lg"
+            fullWidth
+            onClick={() => setIsShareModalOpen(true)}
+            className="gap-2"
+          >
+            <Share2 size={18} />
+            Share
+          </Button>
         </div>
       </div>
 
-      {/* Reminder Section - Decorative only, CampaignActionBar handles the actual reminder */}
+      {/* Reminder Section */}
       <div className="flex flex-col items-center gap-2 sm:gap-3 py-4 sm:py-6 border-t border-border-subtle">
         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/5 flex items-center justify-center mb-1 sm:mb-2">
-          <Calendar className="text-purple-400" size={18} />
+          <CalendarIcon className="text-purple-400" size={18} />
         </div>
         <p className="text-white/60 text-sm">Can&apos;t donate right now?</p>
-        <p className="text-white/40 text-xs">
-          Use the &quot;Remind Me&quot; button above to set a reminder
-        </p>
+        <button className="text-purple-400 text-sm hover:text-purple-300 underline underline-offset-2 transition-colors">
+          Set up a reminder
+        </button>
       </div>
+
+      {/* Share Modal */}
+      <ShareCampaignModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        campaignUrl={campaignUrl}
+        campaignTitle={campaign.title}
+      />
     </div>
   );
 }

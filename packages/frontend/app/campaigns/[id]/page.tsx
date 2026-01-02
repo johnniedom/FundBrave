@@ -8,7 +8,7 @@ import CampaignStory from "@/app/components/campaigns/view/CampaignStory";
 import CampaignComments from "@/app/components/campaigns/view/CampaignComments";
 import CampaignUpdates from "@/app/components/campaigns/view/CampaignUpdates";
 import { CampaignActionBar } from "@/app/components/campaigns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@/app/components/ui/icons";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -96,7 +96,7 @@ export default function CampaignViewPage() {
               <CampaignActionBar
                 campaign={campaignData}
                 variant="buttons"
-                showDonate
+                showDonate={true}
               />
             </div>
 

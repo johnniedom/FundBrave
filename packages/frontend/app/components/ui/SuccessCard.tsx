@@ -1,8 +1,7 @@
 "use client";
 import React from "react";
-// import { Button } from "./button";
+import { Button } from "./button";
 import { cn } from "@/lib/utils";
-import DesignButton from "../common/DesignButton";
 import { useAnimate, motion } from "motion/react";
 
 interface SuccessCardProps {
@@ -119,9 +118,9 @@ const SuccessCard: React.FC<SuccessCardProps> = ({
         className={"flex justify-center transition-all duration-500 delay-800"}
         ref={buttonScope}
       >
-        <DesignButton
+        <Button
           variant="primary"
-          size="medium"
+          size="md"
           fullWidth={false}
           onClick={(e) => {
             // Run the animation sequence
@@ -140,7 +139,7 @@ const SuccessCard: React.FC<SuccessCardProps> = ({
           )}
         >
           {buttonText}
-        </DesignButton>
+        </Button>
       </div>
 
       {/* Optional Background Pattern */}

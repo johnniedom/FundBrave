@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/app/components/ui/icons";
 import type { DonationImpactPreviewProps } from "@/types/donation";
 
 /**

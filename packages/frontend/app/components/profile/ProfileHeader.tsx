@@ -57,11 +57,11 @@ export default function ProfileHeader({ user }: ProfileHeaderProps) {
 
           {/* Points Badge */}
           <div className="flex items-center gap-1 mt-1">
-            <TrophyIcon className="w-6 h-6 text-[#eb9f08]" />
-            <span className="text-[#eb9f08] text-sm font-semibold leading-[21px] tracking-wide">
+            <TrophyIcon className="w-6 h-6 text-amber-500" />
+            <span className="text-amber-500 text-sm font-semibold leading-[21px] tracking-wide">
               {user.points}
             </span>
-            <span className="text-[#eb9f08] text-sm font-semibold leading-[21px] tracking-wide">
+            <span className="text-amber-500 text-sm font-semibold leading-[21px] tracking-wide">
               points collected
             </span>
           </div>

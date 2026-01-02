@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/app/components/ui/icons";
 import { CampaignCard, CategorySidebar } from "../components/campaigns";
 
 // Sort options for filtering campaigns

@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
-import { X, ChevronDown } from "lucide-react";
-import { DesignButton } from "../../common/DesignButton";
+import React, { useRef, useCallback, useEffect } from "react";
+import gsap from "gsap";
+import { X, ChevronDown } from "@/app/components/ui/icons";
+import { Button } from "../button";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import ModalBackdrop from "../../common/ModalBackdrop";
@@ -101,18 +102,18 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({
       />
 
       <div className="flex flex-col sm:flex-row gap-4">
-        <DesignButton
+        <Button
           variant="secondary"
-          size="medium"
+          size="md"
           onClick={onRewriteWithAI}
           className="flex-1 w-full"
           disabled={isPublishing}
         >
           Rewrite with AI
-        </DesignButton>
-        <DesignButton
+        </Button>
+        <Button
           variant="primary"
-          size="medium"
+          size="md"
           onClick={onPublish}
           className="flex-1 w-full"
           disabled={!isValid || isPublishing}
@@ -120,7 +121,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({
           loadingText="Publishing..."
         >
           Publish
-        </DesignButton>
+        </Button>
       </div>
     </div>
   );
@@ -195,9 +196,9 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
         />
       </div>
 
-      <DesignButton
+      <Button
         variant="primary"
-        size="medium"
+        size="md"
         onClick={onPublish}
         fullWidth
         disabled={!isValid || isPublishing}
@@ -205,7 +206,7 @@ const CreateCampaignUpdateForm: React.FC<CreateCampaignUpdateFormProps> = ({
         loadingText="Publishing..."
       >
         Publish
-      </DesignButton>
+      </Button>
     </div>
   );
 };
@@ -237,6 +238,35 @@ const CreatePost: React.FC<CreatePostProps> = ({
     handleRewriteWithAI,
   } = useCreatePost(onPublish, onClose);
 
+  // GSAP refs
+  const closeRef = useRef<SVGSVGElement>(null);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf(closeRef.current);
+    };
+  }, []);
+
+  // Close button hover animations
+  const handleCloseHover = useCallback(() => {
+    if (!closeRef.current) return;
+    gsap.to(closeRef.current, {
+      rotation: 90,
+      duration: 0.2,
+      ease: "power2.out",
+    });
+  }, []);
+
+  const handleCloseLeave = useCallback(() => {
+    if (!closeRef.current) return;
+    gsap.to(closeRef.current, {
+      rotation: 0,
+      duration: 0.2,
+      ease: "power2.out",
+    });
+  }, []);
+
   // Media action handlers - implement based on your requirements
   const mediaActions: MediaActionsProps = {
     onImageClick: () => console.log("Image clicked"),
@@ -266,6 +296,8 @@ const CreatePost: React.FC<CreatePostProps> = ({
           {/* Close Button */}
           <button
             onClick={onClose}
+            onMouseEnter={handleCloseHover}
+            onMouseLeave={handleCloseLeave}
             aria-label="Close modal"
             type="button"
             className={cn(
@@ -276,7 +308,7 @@ const CreatePost: React.FC<CreatePostProps> = ({
               "top-4 right-4 sm:top-6 sm:right-6 lg:top-[37px] lg:right-[37px]"
             )}
           >
-            <X size={16} />
+            <X ref={closeRef} size={16} />
           </button>
 
           <UserProfileHeader user={user} />

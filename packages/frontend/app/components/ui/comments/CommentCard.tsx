@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Heart, MessageCircle, Trash2, MoreHorizontal } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import gsap from "gsap";
+import { Heart, MessageCircle, MoreHorizontal, Trash2 } from "@/app/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { CommentInput } from "./CommentInput";
 import type { Comment } from "@/app/provider/PostsContext";
@@ -35,7 +36,7 @@ interface CommentCardProps {
 }
 
 /**
- * CommentCard - Displays a single comment with actions and nested replies
+ * CommentCard - Displays a single comment with GSAP micro-interactions
  */
 export function CommentCard({
   comment,
@@ -50,15 +51,66 @@ export function CommentCard({
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
+  // GSAP refs
+  const likeIconRef = useRef<SVGSVGElement>(null);
+  const replyIconRef = useRef<SVGSVGElement>(null);
+  const menuIconRef = useRef<SVGSVGElement>(null);
+
+  // Cleanup GSAP on unmount
+  useEffect(() => {
+    return () => {
+      gsap.killTweensOf([likeIconRef.current, replyIconRef.current, menuIconRef.current]);
+    };
+  }, []);
+
   const isOwnComment = comment.author.username === currentUserUsername;
   const canNestMore = depth < maxDepth;
 
+  // Animate like with GSAP
+  const animateLike = useCallback(() => {
+    if (!likeIconRef.current) return;
+
+    gsap.timeline()
+      .to(likeIconRef.current, {
+        scale: 1.5,
+        duration: 0.15,
+        ease: "back.out(3)",
+      })
+      .to(likeIconRef.current, {
+        scale: 1,
+        duration: 0.3,
+        ease: "elastic.out(1, 0.5)",
+      });
+  }, []);
+
+  // Animate reply icon
+  const animateReply = useCallback(() => {
+    if (!replyIconRef.current) return;
+
+    gsap.to(replyIconRef.current, {
+      rotation: -15,
+      duration: 0.1,
+      yoyo: true,
+      repeat: 1,
+      ease: "power1.inOut",
+      onComplete: () => {
+        gsap.set(replyIconRef.current, { rotation: 0 });
+      },
+    });
+  }, []);
+
   const handleLikeClick = () => {
+    animateLike();
     if (comment.isLiked) {
       onUnlike(comment.id);
     } else {
       onLike(comment.id);
     }
+  };
+
+  const handleReplyClick = () => {
+    animateReply();
+    setShowReplyInput(!showReplyInput);
   };
 
   const handleReply = (content: string) => {
@@ -128,6 +180,7 @@ export function CommentCard({
               )}
             >
               <Heart
+                ref={likeIconRef}
                 size={14}
                 fill={comment.isLiked ? "currentColor" : "none"}
               />
@@ -137,10 +190,10 @@ export function CommentCard({
             {/* Reply */}
             {canNestMore && (
               <button
-                onClick={() => setShowReplyInput(!showReplyInput)}
+                onClick={handleReplyClick}
                 className="flex items-center gap-1.5 text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors"
               >
-                <MessageCircle size={14} />
+                <MessageCircle ref={replyIconRef} size={14} />
                 Reply
               </button>
             )}

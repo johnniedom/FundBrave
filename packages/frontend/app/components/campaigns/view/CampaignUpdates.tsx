@@ -1,7 +1,7 @@
 "use client";
 
 import { Update } from "@/app/campaigns/data";
-import { MessageSquare, Heart, Share2 } from "lucide-react";
+import { MessageSquare, Heart, Share2 } from "@/app/components/ui/icons";
 
 interface CampaignUpdatesProps {
   updates: Update[];
