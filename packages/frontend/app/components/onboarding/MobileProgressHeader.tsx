@@ -18,17 +18,17 @@ export const MobileProgressHeader = () => {
       {/* Logo */}
       <div className="flex items-center gap-3 text-white mb-6">
         <Image
-          src={"/FundBrave_icon_dark.png"}
+          src={"/Fundbrave_icon_light.png"}
           alt="FundBrave logo"
-          width={100}
-          height={100}
-          className="w-[150px]"
+          width={40}
+          height={40}
+          className="object-contain"
         />
         <span className="text-xl font-bold">FundBrave</span>
       </div>
 
       {/* Horizontal step indicators */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center">
         {steps.map((step, index) => {
           const status =
             currentStepIndex > index

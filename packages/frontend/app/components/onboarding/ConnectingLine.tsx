@@ -68,7 +68,7 @@ export const ConnectingLineHorizontal = ({
 
   return (
     <div
-      className="relative flex items-center flex-1"
+      className="relative flex items-center flex-1 -mx-1 -z-20"
       style={{ height: "2px", marginTop: "15px" }}
     >
       {/* Background line (unfilled state) */}

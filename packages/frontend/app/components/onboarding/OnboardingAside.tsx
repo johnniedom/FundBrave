@@ -24,12 +24,12 @@ export const OnboardingAside = () => {
       {/* Logo and brand */}
       <div>
         <div className="flex items-center gap-3 text-white mb-8 md:mb-16">
-          <div className="w-10 h-10 rounded-lg">
+          <div className="w-10 h-10 rounded-lg relative">
             <Image
-              src={"/Funbrave_icon_dark.png"}
+              src={"/Fundbrave_icon_light.png"}
               alt="FundBrave logo"
               fill
-              className="w-[150px]"
+              className="object-contain"
             />
           </div>
           <span className="text-2xl font-bold">FundBrave</span>
