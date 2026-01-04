@@ -26,7 +26,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
   } = useProfileForm({ onSubmitSuccess: onNext });
 
   return (
-    <div className="flex flex-col w-full max-w-[800px] px-4 overflow-y-auto">
+    <div className="flex flex-col w-full max-w-2xl px-4">
       {/* Header */}
       <motion.div
         className="flex flex-col gap-1 mb-10"
@@ -61,7 +61,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
           transition={{ delay: 0.2 }}
         >
           {/* Name Field */}
-          <div className="flex flex-col gap-3 flex-1 max-w-[267px]">
+          <div className="flex flex-col gap-3 flex-1">
             <label
               htmlFor="name"
               className="text-white text-lg font-medium tracking-wide"
@@ -80,6 +80,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
                 id="name"
                 type="text"
                 name="name"
+                inputMode="text"
                 value={formData.name}
                 onChange={handleInputChange}
                 onBlur={() => handleBlur("name")}
@@ -93,7 +94,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
           </div>
 
           {/* Username Field */}
-          <div className="flex flex-col gap-3 flex-1 max-w-[267px]">
+          <div className="flex flex-col gap-3 flex-1">
             <label
               htmlFor="username"
               className="text-white text-lg font-medium tracking-wide"
@@ -112,6 +113,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
                 id="username"
                 type="text"
                 name="username"
+                inputMode="text"
                 value={formData.username}
                 onChange={handleInputChange}
                 onBlur={() => handleBlur("username")}
@@ -150,6 +152,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
               id="email"
               type="email"
               name="email"
+              inputMode="email"
               value={formData.email}
               onChange={handleInputChange}
               onBlur={() => handleBlur("email")}
@@ -233,8 +236,6 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
         onBack={onBack}
         onNext={handleSubmit}
         isLoading={isLoading}
-        backWidth="w-[265px]"
-        nextWidth="w-[265px]"
       />
     </div>
   );

@@ -108,7 +108,7 @@ export const MobileStepItem = ({
 
   return (
     <motion.div
-      className="relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+      className="relative w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
       animate={{
         backgroundColor: isCompleted
           ? "#8B5CF6"
@@ -138,7 +138,7 @@ export const MobileStepItem = ({
             exit={{ scale: 0, rotate: 180 }}
             transition={{ duration: 0.3 }}
           >
-            <Check className="w-4 h-4 text-white" />
+            <Check className="w-5 h-5 text-white" />
           </motion.div>
         ) : (
           <motion.div
@@ -149,7 +149,7 @@ export const MobileStepItem = ({
           >
             <Icon
               useGradient={isNext}
-              className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`}
+              className={`w-5 h-5 ${isActive ? "text-white" : "text-gray-400"}`}
             />
           </motion.div>
         )}
