@@ -12,8 +12,6 @@ interface OnboardingNavButtonsProps {
   loadingLabel?: string;
   backLabel?: string;
   animationDelay?: number;
-  backWidth?: string;
-  nextWidth?: string;
 }
 
 /**
@@ -28,12 +26,10 @@ const OnboardingNavButtons: React.FC<OnboardingNavButtonsProps> = ({
   loadingLabel = "Saving...",
   backLabel = "Back",
   animationDelay = 0.6,
-  backWidth = "w-[200px]",
-  nextWidth = "w-[200px]",
 }) => {
   return (
     <motion.div
-      className="flex gap-4 items-center justify-center w-full"
+      className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: animationDelay }}
@@ -42,7 +38,7 @@ const OnboardingNavButtons: React.FC<OnboardingNavButtonsProps> = ({
         <button
           onClick={onBack}
           disabled={isLoading}
-          className={`${backWidth} h-14 px-10 py-4 bg-[rgba(69,12,240,0.1)] border border-[#450cf0] rounded-[20px] text-white font-semibold text-base tracking-wide backdrop-blur-md shadow-[0px_8px_30px_0px_rgba(29,5,82,0.35)] hover:bg-[rgba(69,12,240,0.15)] transition-colors disabled:opacity-50`}
+          className="w-full sm:w-auto sm:min-w-[180px] min-h-[44px] h-14 px-10 py-4 bg-[rgba(69,12,240,0.1)] border border-[#450cf0] rounded-[20px] text-white font-semibold text-base tracking-wide backdrop-blur-md shadow-[0px_8px_30px_0px_rgba(29,5,82,0.35)] hover:bg-[rgba(69,12,240,0.15)] active:scale-[0.98] active:bg-[rgba(69,12,240,0.25)] transition-all disabled:opacity-50"
         >
           {backLabel}
         </button>
@@ -51,7 +47,7 @@ const OnboardingNavButtons: React.FC<OnboardingNavButtonsProps> = ({
         <button
           onClick={onNext}
           disabled={isLoading}
-          className={`${nextWidth} h-14 px-8 py-4 rounded-[20px] text-white font-semibold text-lg tracking-wide shadow-[0px_3px_3px_0px_rgba(254,254,254,0.25)] transition-all hover:shadow-lg disabled:opacity-70 flex items-center justify-center gap-2`}
+          className="w-full sm:w-auto sm:min-w-[180px] min-h-[44px] h-14 px-8 py-4 rounded-[20px] text-white font-semibold text-lg tracking-wide shadow-[0px_3px_3px_0px_rgba(254,254,254,0.25)] transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
           style={{
             background: "linear-gradient(97deg, #450CF0 0%, #CD82FF 100%)",
           }}

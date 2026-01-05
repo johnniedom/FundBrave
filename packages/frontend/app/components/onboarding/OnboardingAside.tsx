@@ -24,12 +24,12 @@ export const OnboardingAside = () => {
       {/* Logo and brand */}
       <div>
         <div className="flex items-center gap-3 text-white mb-8 md:mb-16">
-          <div className="w-10 h-10 rounded-lg">
+          <div className="w-10 h-10 rounded-lg relative">
             <Image
-              src={"/Funbrave_icon_dark.png"}
+              src={"/Fundbrave_icon_light.png"}
               alt="FundBrave logo"
               fill
-              className="w-[150px]"
+              className="object-contain"
             />
           </div>
           <span className="text-2xl font-bold">FundBrave</span>
@@ -63,11 +63,11 @@ export const OnboardingAside = () => {
         </div>
       </div>
 
-      {/* Footer link */}
+      {/* Footer link - Mobile-first: min-h-11 for 44px touch target, active state for mobile */}
       <div className="text-muted-foreground text-sm">
         <a
           href="/"
-          className="hover:text-white transition-colors inline-flex items-center gap-2"
+          className="min-h-11 px-2 -mx-2 rounded-lg inline-flex items-center gap-2 transition-colors hover:text-white active:text-white active:bg-white/10"
         >
           <span>&larr;</span>
           <span>Back to home</span>

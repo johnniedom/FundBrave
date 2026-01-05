@@ -49,7 +49,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         {onBack && (
           <motion.button
             onClick={onBack}
-            className="py-3 px-6 bg-secondary rounded-lg text-white font-semibold hover:bg-secondary/80 transition-colors"
+            className="py-3 px-6 min-h-[44px] bg-secondary rounded-lg text-white font-semibold hover:bg-secondary/80 active:scale-[0.98] transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -58,7 +58,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         )}
         <motion.button
           onClick={handleGoHome}
-          className="py-3 px- rounded-lg text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+          className="py-3 px-6 min-h-[44px] rounded-lg text-white font-semibold hover:shadow-lg hover:shadow-purple-500/50 active:scale-[0.98] transition-all"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           style={{
