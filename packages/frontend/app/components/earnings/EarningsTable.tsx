@@ -101,9 +101,9 @@ export function EarningsTable({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table - min-width ensures table doesn't collapse on mobile */}
       <div className="overflow-x-auto max-h-[300px] overflow-y-auto scrollbar-auto-hide">
-        <table className="w-full">
+        <table className="w-full min-w-[600px]">
           {/* Table Header */}
           <thead>
             <tr className="bg-white/5 border-b border-white/10">

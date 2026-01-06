@@ -44,11 +44,13 @@ export interface StoriesRowProps {
   onCreateStory?: () => void;
   onStoryClick?: (storyId: string) => void;
   className?: string;
+  initialExpanded?: boolean;
 }
 
 export interface StoryItemProps {
   story: Story;
   onClick?: () => void;
+  isExpanded?: boolean;
 }
 
 // Props for Feed components

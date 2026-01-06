@@ -86,7 +86,7 @@ export function MobileDrawer({ isOpen, onClose, children }: MobileDrawerProps) {
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 rounded-full"
+              className="h-11 w-11 rounded-full"
               aria-label="Close community drawer"
             >
               <X className="h-5 w-5" />
@@ -170,7 +170,7 @@ export function CommunitySidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full"
+            className="h-11 w-11 rounded-full"
             aria-label="Search communities"
           >
             <Search className="h-5 w-5" />
@@ -178,7 +178,7 @@ export function CommunitySidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full"
+            className="h-11 w-11 rounded-full"
             aria-label="Create community"
             onClick={onCreateCommunity}
           >

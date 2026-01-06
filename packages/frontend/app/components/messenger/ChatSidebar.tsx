@@ -88,7 +88,7 @@ export function MobileChatDrawer({
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="h-8 w-8 rounded-full"
+              className="h-11 w-11 rounded-full"
               aria-label="Close chat drawer"
             >
               <X className="h-5 w-5" />
@@ -166,7 +166,7 @@ export function ChatSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-white/5"
+            className="h-11 w-11 rounded-full hover:bg-white/5"
             aria-label="Search chats"
             onClick={() => setIsSearchOpen(!isSearchOpen)}
           >
@@ -175,7 +175,7 @@ export function ChatSidebar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full hover:bg-white/5"
+            className="h-11 w-11 rounded-full hover:bg-white/5"
             aria-label="New chat"
             onClick={onNewChat}
           >

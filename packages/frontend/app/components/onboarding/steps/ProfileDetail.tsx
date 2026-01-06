@@ -61,7 +61,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
           transition={{ delay: 0.2 }}
         >
           {/* Name Field */}
-          <div className="flex flex-col gap-3 flex-1">
+          <div className="flex flex-col gap-3 flex-1 sm:max-w-[267px]">
             <label
               htmlFor="name"
               className="text-white text-lg font-medium tracking-wide"
@@ -94,7 +94,7 @@ const ProfileDetails: React.FC<StepComponentProps> = ({ onNext, onBack }) => {
           </div>
 
           {/* Username Field */}
-          <div className="flex flex-col gap-3 flex-1">
+          <div className="flex flex-col gap-3 flex-1 sm:max-w-[267px]">
             <label
               htmlFor="username"
               className="text-white text-lg font-medium tracking-wide"

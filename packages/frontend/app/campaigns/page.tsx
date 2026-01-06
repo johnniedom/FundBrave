@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "@/app/components/ui/icons";
-import { CampaignCard, CategorySidebar } from "../components/campaigns";
+import { CampaignCard, CategorySidebar, MobileCategoryFilter } from "../components/campaigns";
 import { Navbar } from "@/app/components/common";
 
 // Sort options for filtering campaigns
@@ -174,6 +174,12 @@ export default function CampaignsPage() {
 
         {/* Campaigns Grid Section - Scrollable independently */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Mobile Category Filter - Only visible on mobile */}
+          <MobileCategoryFilter
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+          />
+
           {/* Sort Dropdown */}
           <div className="flex justify-end mb-5">
             <div className="relative">

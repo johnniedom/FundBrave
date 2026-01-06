@@ -17,6 +17,10 @@ interface FormInputProps {
   delay?: number;
   icon?: React.ReactNode;
   className?: string;
+  /** Mobile keyboard optimization - determines which keyboard to show */
+  inputMode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+  /** Browser autofill hint */
+  autoComplete?: string;
 }
 
 const defaultIcons = {
@@ -37,6 +41,8 @@ export default function FormInput({
   delay = 0.9,
   icon,
   className = "",
+  inputMode,
+  autoComplete,
 }: FormInputProps) {
   const displayIcon = icon || defaultIcons[type];
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -101,6 +107,8 @@ export default function FormInput({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
+          inputMode={inputMode}
+          autoComplete={autoComplete}
           className={`w-full rounded-lg bg-neutral-dark-400/50 py-3 pl-12 pr-4 text-white placeholder-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 ${
             error
               ? 'border border-destructive focus:ring-destructive'
