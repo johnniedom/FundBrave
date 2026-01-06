@@ -56,6 +56,7 @@ export {
   ArrowLeft,
   MessageSquare,
   PartyPopper,
+  Settings,
 } from './ui';
 
 // Form Icons (mail, lock, user, upload)
