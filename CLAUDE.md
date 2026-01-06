@@ -23,11 +23,7 @@ packages/
 ## Key Commands
 
 ```bash
-npm run dev          # Start all services
-npm run build        # Build all packages
-npm run lint         # Lint all packages
-npm run test         # Run tests
-npm run type-check   # TypeScript validation
+pnpm run build        # Build all packages
 ```
 
 ## Frontend Structure
@@ -53,7 +49,7 @@ app/
 ## Styling Conventions
 
 - Use CSS variables from `globals.css` for colors
-- Border standard: `border-white/10`
+- Border standard: `border-border-subtle`
 - Components use `class-variance-authority` for variants
 - Animation: GSAP and Motion library
 
@@ -62,5 +58,4 @@ app/
 - `lucide-react` - Icons
 - `class-variance-authority` - Component variants
 - `zod` - Schema validation
-- `next-auth` - Authentication
 - `canvas-confetti` - Celebration effects

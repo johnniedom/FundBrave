@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Navbar } from "@/app/components/common";
 import {
   ProfileSidebar,
   StatsCard,
@@ -73,7 +74,9 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-dark-500">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-neutral-dark-500 pt-20">
       <div className="flex w-full max-w-[1400px] mx-auto px-4 py-6 gap-6">
         {/* Left Sidebar - Profile */}
         <aside className="hidden lg:block w-[280px] shrink-0">
@@ -149,6 +152,7 @@ export default function DashboardPage() {
         currency="USD"
         isLoading={isProcessing}
       />
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,5 @@
 const { expect } = require("chai");
-const hre = require("hardhat");
-const { ethers } = hre;
+const { ethers } = require("hardhat");
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
 
 // --- Ethers v6 Compatibility Helpers ---
@@ -191,50 +190,47 @@ describe("FundBrave Comprehensive System Tests", () => {
 
         it("should prevent duplicate World ID usage", async () => {
             const { factory, creator, beneficiary } = await loadFixture(deploySystemFixture);
-
+            
             await createFundraiser(factory, creator, beneficiary, NULL_HASH);
-
+            
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Duplicate", ["img.png"], ["Environment"], "Desc", "Brazil",
                     beneficiary.address, usdc("10000"), 30,
                     NULL_ROOT, NULL_HASH, NULL_PROOF
                 )
-            ).to.be.revertedWithCustomError(factory, "WorldIDAlreadyUsed");
+            ).to.be.revertedWith("WorldID: Already used");
         });
 
         it("should validate fundraiser parameters", async () => {
             const { factory, creator, beneficiary } = await loadFixture(deploySystemFixture);
-
-            // Get the FundraiserFactoryLib for custom error checking
-            const FundraiserFactoryLib = await ethers.getContractFactory("FundraiserFactoryLib");
-
-            // Invalid goal - now uses custom error GoalOutsideRange from library
+            
+            // Invalid goal
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Test", ["img.png"], ["Environment"], "Desc", "Brazil",
                     beneficiary.address, usdc("50"), 30,
                     NULL_ROOT, 111111, NULL_PROOF
                 )
-            ).to.be.reverted;
-
-            // Invalid duration - now uses custom error DurationOutsideRange from library
+            ).to.be.revertedWith("Goal outside allowed range");
+            
+            // Invalid duration
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Test", ["img.png"], ["Environment"], "Desc", "Brazil",
                     beneficiary.address, usdc("10000"), 1,
                     NULL_ROOT, 222222, NULL_PROOF
                 )
-            ).to.be.reverted;
-
-            // Invalid category - now uses custom error InvalidCategory from library
+            ).to.be.revertedWith("Duration outside allowed range");
+            
+            // Invalid category
             await expect(
                 factory.connect(creator).createFundraiser(
                     "Test", ["img.png"], ["InvalidCategory"], "Desc", "Brazil",
                     beneficiary.address, usdc("10000"), 30,
                     NULL_ROOT, 333333, NULL_PROOF
                 )
-            ).to.be.reverted;
+            ).to.be.revertedWith("Invalid category");
         });
 
         it("should deploy staking pool with fundraiser", async () => {
@@ -367,15 +363,15 @@ describe("FundBrave Comprehensive System Tests", () => {
 
         it("should prevent zero-amount donations", async () => {
             const { factory, creator, beneficiary, donor, usdcToken } = await loadFixture(deploySystemFixture);
-
+            
             await createFundraiser(factory, creator, beneficiary);
-
+            
             await usdcToken.mint(donor.address, usdc("1000"));
             await usdcToken.connect(donor).approve(await factory.getAddress(), usdc("1000"));
-
+            
             await expect(
                 factory.connect(donor).donateERC20(0, await usdcToken.getAddress(), 0)
-            ).to.be.revertedWithCustomError(factory, "InvalidAmount");
+            ).to.be.revertedWith("Factory: Amount must be > 0");
         });
 
         it("should track total funds raised", async () => {
@@ -434,23 +430,17 @@ describe("FundBrave Comprehensive System Tests", () => {
             await factory.connect(staker).stakeERC20(0, await usdcToken.getAddress(), usdc("10000"));
             
             await aUsdcToken.mint(await stakingPool.getAddress(), usdc("1000"));
-
+            
             await ethers.provider.send("evm_increaseTime", [86401]);
             await ethers.provider.send("evm_mine");
-
+            
             await stakingPool.performUpkeep("0x");
-
-            // Check staker's USDC yield (not FBT rewards)
-            const stakerYield = await stakingPool.earnedUSDC(staker.address);
-            expect(stakerYield).to.be.gt(0);
-
-            // Trigger reward distribution by having staker claim rewards
-            // This will also distribute fundraiser and platform shares
-            const beneficiaryBalanceBefore = await usdcToken.balanceOf(beneficiary.address);
-            await stakingPool.connect(staker).claimAllRewards();
-            const beneficiaryBalanceAfter = await usdcToken.balanceOf(beneficiary.address);
-
-            expect(beneficiaryBalanceAfter).to.be.gt(beneficiaryBalanceBefore);
+            
+            const stakerRewards = await stakingPool.claimableRewards(staker.address);
+            const fundraiserBalance = await usdcToken.balanceOf(beneficiary.address);
+            
+            expect(stakerRewards).to.be.gt(0);
+            expect(fundraiserBalance).to.be.gt(0);
         });
     });
 
@@ -915,12 +905,12 @@ describe("FundBrave Comprehensive System Tests", () => {
 
         it("should prevent non-bridge from bridge functions", async () => {
             const { factory, creator } = await loadFixture(deploySystemFixture);
-
+            
             await expect(
                 factory.connect(creator).handleCrossChainDonation(
                     creator.address, 0, usdc("100")
                 )
-            ).to.be.revertedWithCustomError(factory, "NotBridge");
+            ).to.be.revertedWith("Factory: Caller is not the bridge");
         });
     });
 });
