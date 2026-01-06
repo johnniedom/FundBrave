@@ -6,6 +6,7 @@ import { PartyPopper } from "@/app/components/ui/icons";
 import { StepComponentProps } from "@/lib/onboarding-steps";
 import { useRouter } from "next/navigation";
 import { useOnboardingData } from "@/app/provider/OnboardingDataContext";
+import { EASE_ORGANIC } from "@/lib/constants/animation";
 
 // Staggered text reveal variants
 const textContainerVariants = {
@@ -26,7 +27,7 @@ const textItemVariants = {
     y: 0,
     transition: {
       duration: 0.4,
-      ease: [0.32, 0.72, 0, 1], // Organic flow easing
+      ease: EASE_ORGANIC,
     },
   },
 };
@@ -50,7 +51,7 @@ const buttonVariants = {
     y: 0,
     transition: {
       duration: 0.4,
-      ease: [0.32, 0.72, 0, 1],
+      ease: EASE_ORGANIC,
     },
   },
 };

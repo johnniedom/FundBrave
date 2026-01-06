@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { EASE_ORGANIC } from "@/lib/constants/animation";
 
 interface ConnectingLineProps {
   index: number;
@@ -44,7 +45,7 @@ export const ConnectingLine = ({
         }}
         transition={{
           duration: 0.6,
-          ease: [0.32, 0.72, 0, 1], // Organic flow easing
+          ease: EASE_ORGANIC,
         }}
       />
     </div>
@@ -87,7 +88,7 @@ export const ConnectingLineHorizontal = ({
         }}
         transition={{
           duration: 0.6,
-          ease: [0.32, 0.72, 0, 1], // Organic flow easing
+          ease: EASE_ORGANIC,
         }}
       />
     </div>

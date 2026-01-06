@@ -6,6 +6,7 @@ import { useOnboarding } from "@/app/provider/OnboardingContext";
 import { MobileStepItem } from "./StepItem";
 import { ConnectingLineHorizontal } from "./ConnectingLine";
 import Image from "next/image";
+import { EASE_ORGANIC } from "@/lib/constants/animation";
 
 // Staggered reveal animation variants for mobile
 const stepsContainerVariants = {
@@ -26,7 +27,7 @@ const stepItemVariants = {
     y: 0,
     transition: {
       duration: 0.3,
-      ease: [0.32, 0.72, 0, 1], // Organic flow easing
+      ease: EASE_ORGANIC,
     },
   },
 };
@@ -38,7 +39,7 @@ const textVariants = {
     y: 0,
     transition: {
       duration: 0.4,
-      ease: [0.32, 0.72, 0, 1],
+      ease: EASE_ORGANIC,
     },
   },
 };
@@ -63,7 +64,7 @@ export const MobileProgressHeader = ({ showLogo = false }: MobileProgressHeaderP
           className="flex items-center gap-3 text-white mb-6"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+          transition={{ duration: 0.4, ease: EASE_ORGANIC }}
         >
           <Image
             src={"/Fundbrave_icon_light.png"}
