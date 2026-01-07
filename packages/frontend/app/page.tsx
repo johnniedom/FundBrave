@@ -74,7 +74,7 @@ export default function HomePage() {
 
   // Right Sidebar Content
   const rightSidebar = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {/* Top Funders Leaderboard */}
       <Leaderboard
         entries={MOCK_TOP_FUNDERS}
@@ -94,7 +94,7 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-dark-500">
+    <div className="min-h-screen bg-background">
       {/* Global Navbar */}
       <Navbar />
 
@@ -105,20 +105,20 @@ export default function HomePage() {
           stories={MOCK_STORIES}
           onCreateStory={handleCreateStory}
           onStoryClick={handleStoryClick}
-          className="mb-4 mt-8"
+          className="mb-6 mt-6"
         />
 
         {/* Create Post Inline */}
         <CreatePostInline
           userAvatar={MOCK_CURRENT_USER.avatar}
-          className="mb-4"
+          className="mb-6"
         />
 
         {/* Feed Filters */}
         <FeedFilters
           activeFilter={feedFilter}
           onChange={setFeedFilter}
-          className="mb-4"
+          className="mb-6"
         />
 
         {/* Feed List with Infinite Scroll */}

@@ -68,7 +68,7 @@ export function CreatePostInline({
     <>
       <div
         className={cn(
-          "bg-[#1a1625]/60 rounded-xl p-4 border border-white/5",
+          "bg-surface-elevated/60 rounded-xl p-4 border border-border-default",
           className
         )}
       >
@@ -87,9 +87,9 @@ export function CreatePostInline({
             onClick={handleOpenModal}
             className={cn(
               "flex-1 text-left px-4 py-3 rounded-xl",
-              "bg-white/5 hover:bg-white/10 transition-colors",
-              "text-white/50 text-sm",
-              "border border-white/5 hover:border-white/10"
+              "bg-surface-overlay hover:bg-surface-overlay/80 transition-colors",
+              "text-text-tertiary text-sm",
+              "border border-border-default hover:border-border-subtle"
             )}
           >
             Create a post
@@ -107,14 +107,14 @@ export function CreatePostInline({
         </div>
 
         {/* Media Actions Toolbar */}
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/5">
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-border-default">
           {MEDIA_ACTIONS.map((action) => (
             <button
               key={action.id}
               onClick={handleOpenModal}
               className={cn(
                 "p-3 min-h-11 min-w-11 rounded-lg",
-                "text-white/50 hover:text-white hover:bg-white/5 active:bg-white/10",
+                "text-text-tertiary hover:text-foreground hover:bg-surface-overlay active:bg-surface-overlay/80",
                 "transition-colors"
               )}
               title={action.label}

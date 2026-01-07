@@ -97,7 +97,7 @@ export function PodiumCard({ user, position }: PodiumCardProps) {
           >
             <div
               className={cn(
-                "rounded-full overflow-hidden bg-neutral-dark-500",
+                "rounded-full overflow-hidden bg-background",
                 styles.avatar
               )}
             >
@@ -114,7 +114,7 @@ export function PodiumCard({ user, position }: PodiumCardProps) {
           {/* Rank Badge - Responsive */}
           <div
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 -bottom-1.5 sm:-bottom-2 flex items-center justify-center rounded-full text-neutral-dark-600 font-bold shadow-lg",
+              "absolute left-1/2 -translate-x-1/2 -bottom-1.5 sm:-bottom-2 flex items-center justify-center rounded-full text-background font-bold shadow-lg",
               "w-6 h-6 text-xs xs:w-7 xs:h-7 xs:text-sm sm:w-8 sm:h-8 sm:text-base md:w-9 md:h-9 md:text-lg lg:w-[37px] lg:h-[37px] lg:text-xl",
               styles.badgeBg
             )}
@@ -128,12 +128,12 @@ export function PodiumCard({ user, position }: PodiumCardProps) {
       <div className="flex flex-col items-center gap-0.5 w-full text-center mt-1">
         <Link
           href={profileUrl}
-          className="font-semibold text-[11px] xs:text-xs sm:text-sm md:text-base text-white tracking-wide hover:text-white/80 transition-colors truncate max-w-full"
+          className="font-semibold text-[11px] xs:text-xs sm:text-sm md:text-base text-foreground tracking-wide hover:text-foreground/80 transition-colors truncate max-w-full"
         >
           {user.name}
         </Link>
         {/* Username - hidden on very small screens */}
-        <p className="hidden xs:block text-[10px] sm:text-xs md:text-sm text-white/50 tracking-wide truncate max-w-full">
+        <p className="hidden xs:block text-[10px] sm:text-xs md:text-sm text-text-secondary tracking-wide truncate max-w-full">
           {user.username}
         </p>
 

@@ -59,7 +59,7 @@ export function FeedFilters({
     <div
       ref={containerRef}
       className={cn(
-        "relative flex items-center gap-2 border-b border-white/10 pb-0",
+        "relative flex items-center gap-2 border-b border-border-default pb-0",
         className
       )}
     >
@@ -72,8 +72,8 @@ export function FeedFilters({
           className={cn(
             "relative px-4 py-3 min-h-11 text-sm font-medium transition-colors",
             activeFilter === option.value
-              ? "text-white"
-              : "text-white/50 hover:text-white/70"
+              ? "text-foreground"
+              : "text-text-tertiary hover:text-text-secondary"
           )}
         >
           {option.label}

@@ -57,6 +57,8 @@ export {
   MessageSquare,
   PartyPopper,
   Settings,
+  Clock,
+  Star,
 } from './ui';
 
 // Form Icons (mail, lock, user, upload)

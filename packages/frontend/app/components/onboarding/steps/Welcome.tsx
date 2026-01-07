@@ -122,7 +122,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         animate="visible"
       >
         <motion.h2
-          className="text-2xl md:text-3xl font-bold text-white mb-4"
+          className="text-2xl md:text-3xl font-bold text-foreground mb-4"
           variants={textItemVariants}
         >
           You're all set!
@@ -145,7 +145,7 @@ const Welcome: React.FC<StepComponentProps> = ({ onBack }) => {
         {onBack && (
           <motion.button
             onClick={onBack}
-            className="py-3 px-6 min-h-[44px] bg-secondary rounded-lg text-white font-semibold"
+            className="py-3 px-6 min-h-[44px] bg-secondary rounded-lg text-foreground font-semibold"
             variants={buttonVariants}
             whileHover={{ scale: 1.02, y: -1 }}
             whileTap={{ scale: 0.98 }}

@@ -72,7 +72,6 @@ export default function OnboardingStepPage({
         transition={pageTransition}
         className="w-full h-full flex items-center justify-center"
         style={{
-          background: "linear-gradient(to bottom, #09011A 0%, #09011A 50%)",
           transformOrigin: "top",
         }}
       >

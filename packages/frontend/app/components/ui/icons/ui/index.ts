@@ -22,4 +22,6 @@ export {
   MessageSquare,
   PartyPopper,
   Settings,
+  Clock,
+  Star,
 } from './UIIcons';

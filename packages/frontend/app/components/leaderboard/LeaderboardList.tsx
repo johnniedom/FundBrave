@@ -29,7 +29,7 @@ export function LeaderboardList({
       className="flex flex-col"
     >
       {/* Visible Leaderboard Entries */}
-      <div className="bg-white/[0.02] rounded-xl sm:rounded-2xl border border-white/5 overflow-hidden">
+      <div className="bg-surface-overlay/50 rounded-xl sm:rounded-2xl border border-border-subtle overflow-hidden">
         <div className="overflow-y-auto scrollbar-auto-hide">
           {visibleUsers.map((user, index) => (
             <motion.div

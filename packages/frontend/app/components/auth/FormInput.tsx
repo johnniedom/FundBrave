@@ -84,7 +84,7 @@ export default function FormInput({
     >
       <motion.label
         htmlFor={id}
-        className="mb-2 block text-white"
+        className="mb-2 block text-foreground"
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: delay + 0.05, duration: 0.3 }}
@@ -109,7 +109,7 @@ export default function FormInput({
           placeholder={placeholder}
           inputMode={inputMode}
           autoComplete={autoComplete}
-          className={`w-full rounded-lg bg-neutral-dark-400/50 py-3 pl-12 pr-4 text-white placeholder-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 ${
+          className={`w-full rounded-lg bg-surface-sunken py-3 pl-12 pr-4 text-foreground placeholder-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 ${
             error
               ? 'border border-destructive focus:ring-destructive'
               : 'focus:ring-primary'

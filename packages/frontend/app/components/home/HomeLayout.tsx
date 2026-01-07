@@ -39,7 +39,7 @@ export function HomeLayout({
           className={cn(
             "hidden lg:fixed lg:left-0 lg:top-20 lg:block w-[280px]",
             "h-[calc(100vh-80px)] overflow-y-auto scrollbar-hidden",
-            "border-r border-white/5 p-4 bg-neutral-dark-500"
+            "border-r border-[var(--border-subtle)] p-6 bg-background"
           )}
         >
           {leftSidebar}
@@ -50,8 +50,8 @@ export function HomeLayout({
       <main
         className={cn(
           "min-w-0",
-          "px-4 py-4 pt-20",
-          "lg:ml-[280px] md:mr-[340px]",
+          "px-6 py-6 pt-24",
+          "lg:ml-[296px] md:mr-[356px]",
           "max-w-xl mx-auto"
         )}
       >
@@ -64,7 +64,7 @@ export function HomeLayout({
           className={cn(
             "hidden md:fixed md:right-0 md:top-20 md:block w-[340px]",
             "h-[calc(100vh-80px)] overflow-y-auto scrollbar-hidden",
-            "border-l border-white/5 p-4 bg-neutral-dark-500"
+            "border-l border-[var(--border-subtle)] p-6 bg-background"
           )}
         >
           {rightSidebar}

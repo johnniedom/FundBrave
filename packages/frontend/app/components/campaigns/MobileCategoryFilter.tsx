@@ -82,7 +82,7 @@ export default function MobileCategoryFilter({
               "font-[family-name:var(--font-family-gilgan)] min-h-[44px]",
               isSelected
                 ? "bg-primary-500 text-white"
-                : "bg-white/10 text-white/70 hover:bg-white/15"
+                : "bg-surface-overlay text-text-secondary hover:bg-surface-elevated"
             )}
           >
             <span className="flex-shrink-0">{category.icon}</span>

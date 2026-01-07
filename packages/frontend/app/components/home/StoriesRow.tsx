@@ -85,7 +85,7 @@ export function StoriesRow({
       ref={containerRef}
       className={cn(
         "flex gap-4 overflow-x-auto scrollbar-hidden py-4 px-3.5",
-        "border-b border-white/10",
+        "border-b border-border-default",
         className
       )}
     >
@@ -102,50 +102,8 @@ export function StoriesRow({
           // Expanded: Large card with purple background
           <div className="relative w-[150px] h-[196px] rounded-xl bg-primary-500/10 flex flex-col items-center justify-center gap-8 overflow-hidden">
             {/* Icon */}
-            <div className="relative z-10 w-9 h-9">
-              <svg
-                viewBox="0 0 36 36"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-full h-full"
-              >
-                <rect
-                  x="1"
-                  y="1"
-                  width="14"
-                  height="14"
-                  rx="2"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="21"
-                  y="1"
-                  width="14"
-                  height="14"
-                  rx="2"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="1"
-                  y="21"
-                  width="14"
-                  height="14"
-                  rx="2"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-                <rect
-                  x="21"
-                  y="21"
-                  width="14"
-                  height="14"
-                  rx="2"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-              </svg>
+            <div className="relative z-10 size-14 rounded-full bg-gradient-to-br from-primary-500 to-soft-purple-500 flex items-center justify-center shadow-lg shadow-primary-500/30">
+              <Plus className="w-5 h-5 text-white" />
             </div>
             {/* Label */}
             <span className="text-base text-white tracking-wide font-normal">
@@ -158,15 +116,15 @@ export function StoriesRow({
             <div
               className={cn(
                 "relative w-16 h-16 rounded-full",
-                "border-2 border-dashed border-white/30",
+                "border-2 border-dashed border-border-default",
                 "flex items-center justify-center",
-                "bg-white/5 hover:bg-white/10 transition-colors",
+                "bg-surface-overlay hover:bg-surface-overlay/80 transition-colors",
                 "group-hover:border-primary-400"
               )}
             >
               {/* Video icon background */}
               <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                <Video className="w-6 h-6 text-white" />
+                <Video className="w-6 h-6 text-foreground" />
               </div>
               {/* Plus icon */}
               <div className="relative z-10 w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-soft-purple-500 flex items-center justify-center shadow-lg shadow-primary-500/30">
@@ -174,7 +132,7 @@ export function StoriesRow({
               </div>
             </div>
             {/* Label */}
-            <span className="mt-2 text-sm text-white/70 group-hover:text-white transition-colors">
+            <span className="mt-2 text-sm text-text-secondary group-hover:text-foreground transition-colors">
               Create Story
             </span>
           </>
@@ -194,7 +152,7 @@ export function StoriesRow({
       {/* Empty State */}
       {stories.length === 0 && (
         <div className="flex items-center justify-center flex-1 py-4">
-          <p className="text-sm text-white/40">No stories yet</p>
+          <p className="text-sm text-text-tertiary">No stories yet</p>
         </div>
       )}
     </div>

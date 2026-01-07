@@ -58,7 +58,7 @@ export function UserPositionIndicator({
     >
       {/* Skip Indicator - Top */}
       <div className="flex items-center justify-center py-2 sm:py-3">
-        <div className="flex items-center gap-1 text-white/30">
+        <div className="flex items-center gap-1 text-text-tertiary">
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />
           <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />
@@ -66,8 +66,8 @@ export function UserPositionIndicator({
       </div>
 
       {/* Surrounding Users - Your Position Section */}
-      <div className="bg-white/[0.02] rounded-xl sm:rounded-2xl border border-primary-500/20 overflow-hidden">
-        <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/5 bg-primary-500/5">
+      <div className="bg-surface-overlay/50 rounded-xl sm:rounded-2xl border border-primary-500/20 overflow-hidden">
+        <div className="px-3 sm:px-4 py-2 sm:py-2.5 border-b border-border-subtle bg-primary-500/5">
           <span className="text-[10px] xs:text-xs sm:text-sm font-medium text-primary-400 uppercase tracking-wider">
             Your Position
           </span>
@@ -85,7 +85,7 @@ export function UserPositionIndicator({
       {/* Skip Indicator - Bottom (if there are more users after) */}
       {currentUserIndex < allUsers.length - 2 && (
         <div className="flex items-center justify-center py-2 sm:py-3">
-          <div className="flex items-center gap-1 text-white/30">
+          <div className="flex items-center gap-1 text-text-tertiary">
             <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />
             <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />
             <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-current" />

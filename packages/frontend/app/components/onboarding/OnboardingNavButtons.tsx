@@ -46,7 +46,7 @@ const OnboardingNavButtons: React.FC<OnboardingNavButtonsProps> = ({
         <motion.button
           onClick={onBack}
           disabled={isLoading}
-          className="w-full sm:w-auto sm:min-w-[180px] min-h-[44px] h-14 px-10 py-4 bg-[rgba(69,12,240,0.1)] border border-[#450cf0] rounded-[20px] text-white font-semibold text-base tracking-wide backdrop-blur-md disabled:opacity-50"
+          className="w-full sm:w-auto sm:min-w-[180px] min-h-[44px] h-14 px-10 py-4 bg-[rgba(69,12,240,0.1)] border border-primary rounded-[20px] text-foreground font-semibold text-base tracking-wide backdrop-blur-md disabled:opacity-50"
           style={{
             boxShadow: "0px 8px 30px 0px rgba(29,5,82,0.35)",
           }}

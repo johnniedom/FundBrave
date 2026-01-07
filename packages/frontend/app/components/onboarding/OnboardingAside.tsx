@@ -41,16 +41,12 @@ export const OnboardingAside = () => {
 
   return (
     <aside
-      className="hidden md:flex w-full md:w-1/3 bg-neutral-dark-500/50 p-6 md:p-12 flex-col justify-between relative md:rounded-l-2xl isolate"
-      style={{
-        background: "linear-gradient(to bottom, var(--primary-500) 0%, var(--neutral-dark-500) 50%)",
-        transformOrigin: "top",
-      }}
+      className="hidden md:flex w-full md:w-1/3 p-6 md:p-12 flex-col justify-between relative md:rounded-l-2xl isolate onboarding-aside-gradient"
     >
       {/* Logo and brand */}
       <div>
         <motion.div
-          className="flex items-center gap-3 text-white mb-8 md:mb-16"
+          className="flex items-center gap-3 text-foreground mb-8 md:mb-16"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE_ORGANIC }}
@@ -108,7 +104,7 @@ export const OnboardingAside = () => {
       >
         <a
           href="/"
-          className="min-h-11 px-2 -mx-2 rounded-lg inline-flex items-center gap-2 transition-colors hover:text-white active:text-white active:bg-white/10"
+          className="min-h-11 px-2 -mx-2 rounded-lg inline-flex items-center gap-2 transition-colors hover:text-foreground active:text-foreground active:bg-foreground/10"
         >
           <span>&larr;</span>
           <span>Back to home</span>

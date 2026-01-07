@@ -42,9 +42,9 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         // Outline: Bordered transparent
         outline:
-          "border border-white/10 bg-transparent text-white hover:bg-white/5",
+          "border border-border-default bg-transparent text-foreground dark:text-white hover:bg-surface-overlay",
         // Ghost: No background until hover
-        ghost: "text-white hover:bg-accent hover:text-accent-foreground",
+        ghost: "text-foreground dark:text-white hover:bg-accent hover:text-accent-foreground",
         // Link: Text only with underline
         link: "text-primary underline-offset-4 hover:underline",
       },

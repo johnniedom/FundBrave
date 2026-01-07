@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-neutral-dark-500 pt-20">
+      <main className="min-h-screen bg-background pt-20">
       <div className="max-w-3xl mx-auto px-2 xs:px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         {/* Page Header */}
         <motion.div

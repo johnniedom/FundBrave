@@ -57,11 +57,11 @@ export const MobileProgressHeader = ({ showLogo = false }: MobileProgressHeaderP
   const { steps, currentStepIndex } = useOnboarding();
 
   return (
-    <div className="md:hidden w-full bg-neutral-dark-500/50 p-6 rounded-t-2xl isolate">
+    <div className="md:hidden w-full bg-background/50 p-6 rounded-t-2xl isolate">
       {/* Logo - conditionally rendered */}
       {showLogo && (
         <motion.div
-          className="flex items-center gap-3 text-white mb-6"
+          className="flex items-center gap-3 text-foreground mb-6"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE_ORGANIC }}
@@ -119,7 +119,7 @@ export const MobileProgressHeader = ({ showLogo = false }: MobileProgressHeaderP
         animate="visible"
         transition={{ delay: 0.5 }}
       >
-        <p className="text-white font-semibold">
+        <p className="text-foreground font-semibold">
           {steps[currentStepIndex].title}
         </p>
         <p className="text-muted-foreground text-sm">

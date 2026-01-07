@@ -59,8 +59,8 @@ export function LeaderboardTabs({ activeTab, onTabChange }: LeaderboardTabsProps
             className={cn(
               "font-medium text-xs xs:text-sm sm:text-base leading-6 tracking-wide transition-all duration-200 px-2 xs:px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg",
               activeTab === tab.id
-                ? "text-white bg-white/5"
-                : "text-white/50 hover:text-white/70 hover:bg-white/[0.02]"
+                ? "text-foreground bg-surface-overlay"
+                : "text-text-secondary hover:text-foreground/70 hover:bg-surface-overlay/50"
             )}
           >
             {tab.label}
@@ -71,7 +71,7 @@ export function LeaderboardTabs({ activeTab, onTabChange }: LeaderboardTabsProps
       {/* Tab Indicator Line */}
       <div className="relative h-px w-full max-w-[280px] xs:max-w-xs sm:max-w-md mx-auto">
         {/* Background Line */}
-        <div className="absolute inset-0 bg-white/5 rounded-full" />
+        <div className="absolute inset-0 bg-border-subtle rounded-full" />
 
         {/* Active Indicator */}
         <div

@@ -201,7 +201,7 @@ export function PostActions({
         disabled={readOnly}
         className={cn(
           "flex items-center gap-1 transition-colors group",
-          showComments ? "text-primary" : "text-white/50 hover:text-primary",
+          showComments ? "text-primary" : "text-text-secondary hover:text-primary",
           readOnly && "cursor-default opacity-70"
         )}
         aria-label={`${commentsCount} comments`}
@@ -222,7 +222,7 @@ export function PostActions({
         onClick={readOnly ? undefined : handleRepost}
         disabled={readOnly}
         className={cn(
-          "flex items-center gap-1 text-white/50 hover:text-green-500 transition-colors group",
+          "flex items-center gap-1 text-text-secondary hover:text-green-500 transition-colors group",
           readOnly && "cursor-default opacity-70"
         )}
         aria-label={`${sharesCount} reposts`}
@@ -244,7 +244,7 @@ export function PostActions({
         disabled={readOnly}
         className={cn(
           "flex items-center gap-1 transition-colors group",
-          isLiked ? "text-pink-500" : "text-white/50 hover:text-pink-500",
+          isLiked ? "text-pink-500" : "text-text-secondary hover:text-pink-500",
           readOnly && "cursor-default"
         )}
         aria-label={`${likesCount} likes`}
@@ -262,7 +262,7 @@ export function PostActions({
 
       {/* Views */}
       <button
-        className="flex items-center gap-1 text-white/50 hover:text-primary transition-colors group cursor-default"
+        className="flex items-center gap-1 text-text-secondary hover:text-primary transition-colors group cursor-default"
         aria-label={`${formatCompactNumber(viewsCount)} views`}
       >
         <div className="p-3 rounded-full group-hover:bg-primary/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
@@ -280,7 +280,7 @@ export function PostActions({
           disabled={readOnly}
           className={cn(
             "p-3 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
-            isBookmarked ? "text-primary" : "text-white/50 hover:text-primary hover:bg-primary/10",
+            isBookmarked ? "text-primary" : "text-text-secondary hover:text-primary hover:bg-primary/10",
             readOnly && "cursor-default opacity-70"
           )}
           aria-label="Bookmark"
@@ -291,7 +291,7 @@ export function PostActions({
           onClick={readOnly ? undefined : handleShare}
           disabled={readOnly}
           className={cn(
-            "p-3 rounded-full text-white/50 hover:text-primary hover:bg-primary/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
+            "p-3 rounded-full text-text-secondary hover:text-primary hover:bg-primary/10 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center",
             readOnly && "cursor-default opacity-70"
           )}
           aria-label="Share"

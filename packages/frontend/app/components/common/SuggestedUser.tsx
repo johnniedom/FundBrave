@@ -53,7 +53,7 @@ export function SuggestedUser({ user, onFollow }: SuggestedUserProps) {
       {/* User Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1">
-          <p className="text-sm font-medium text-white truncate">{user.name}</p>
+          <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
           {user.isVerified && (
             <svg
               className="w-4 h-4 text-primary-400 shrink-0"
@@ -64,7 +64,7 @@ export function SuggestedUser({ user, onFollow }: SuggestedUserProps) {
             </svg>
           )}
         </div>
-        <p className="text-sm text-white/50 truncate">@{user.username}</p>
+        <p className="text-sm text-text-secondary truncate">@{user.username}</p>
       </div>
 
       {/* Follow Button */}
@@ -75,7 +75,7 @@ export function SuggestedUser({ user, onFollow }: SuggestedUserProps) {
         onClick={handleFollow}
         className={cn(
           "shrink-0 min-w-[80px]",
-          isFollowing && "bg-white/10 border-white/20"
+          isFollowing && "bg-surface-overlay border-border-default"
         )}
       >
         {isFollowing ? "Following" : "Follow"}

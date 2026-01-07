@@ -45,12 +45,12 @@ export const StepItem = ({ Icon, title, subtitle, status }: StepItemProps) => {
         className="relative w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
         animate={{
           backgroundColor: isCompleted
-            ? "#8B5CF6"
+            ? "var(--color-primary)"
             : isActive
-            ? "#8B5CF6"
-            : "#1e293b",
+            ? "var(--color-primary)"
+            : "var(--color-surface-sunken)",
           borderWidth: isInactive || isNext ? 2 : 0,
-          borderColor: isInactive || isNext ? "#475569" : "transparent",
+          borderColor: isInactive || isNext ? "var(--color-border-subtle)" : "transparent",
           // Breathing glow effect for active state
           boxShadow: isActive
             ? [
@@ -93,7 +93,7 @@ export const StepItem = ({ Icon, title, subtitle, status }: StepItemProps) => {
               <Icon
                 useGradient={isNext}
                 className={`w-5 h-5 ${
-                  isActive ? "text-white" : "text-gray-400"
+                  isActive ? "text-white" : "text-text-tertiary"
                 }`}
               />
             </motion.div>
@@ -104,7 +104,7 @@ export const StepItem = ({ Icon, title, subtitle, status }: StepItemProps) => {
       {/* Step text content */}
       <motion.div
         animate={{
-          color: isActive || isCompleted ? "#ffffff" : "#9ca3af",
+          color: isActive || isCompleted ? "var(--color-foreground)" : "var(--color-text-tertiary)",
         }}
         transition={{ duration: 0.3 }}
       >
@@ -134,12 +134,12 @@ export const MobileStepItem = ({
       className="relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
       animate={{
         backgroundColor: isCompleted
-          ? "#8B5CF6"
+          ? "var(--color-primary)"
           : isActive
-          ? "#8B5CF6"
-          : "#1e293b",
+          ? "var(--color-primary)"
+          : "var(--color-surface-sunken)",
         borderWidth: isInactive || isNext ? 2 : 0,
-        borderColor: isInactive || isNext ? "#475569" : "transparent",
+        borderColor: isInactive || isNext ? "var(--color-border-subtle)" : "transparent",
         // Breathing glow effect for active state
         boxShadow: isActive
           ? [
@@ -180,7 +180,7 @@ export const MobileStepItem = ({
           >
             <Icon
               useGradient={isNext}
-              className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`}
+              className={`w-4 h-4 ${isActive ? "text-white" : "text-text-tertiary"}`}
             />
           </motion.div>
         )}

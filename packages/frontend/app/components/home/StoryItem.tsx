@@ -84,7 +84,7 @@ export function StoryItem({ story, onClick, isExpanded = true }: StoryItemProps)
                 : "bg-white/30"
             )}
           >
-            <div className="w-full h-full rounded-full overflow-hidden bg-neutral-dark-500">
+            <div className="w-full h-full rounded-full overflow-hidden bg-background">
               <Image
                 src={story.userAvatar}
                 alt={story.userName}
@@ -121,7 +121,7 @@ export function StoryItem({ story, onClick, isExpanded = true }: StoryItemProps)
         )}
       >
         {/* Inner container for spacing */}
-        <div className="w-full h-full rounded-full bg-neutral-dark-500 p-[2px]">
+        <div className="w-full h-full rounded-full bg-background p-[2px]">
           {/* Image */}
           <div className="relative w-full h-full rounded-full overflow-hidden">
             <Image
@@ -135,7 +135,7 @@ export function StoryItem({ story, onClick, isExpanded = true }: StoryItemProps)
       </div>
 
       {/* User name */}
-      <span className="text-sm text-white/70 truncate w-full text-center group-hover:text-white transition-colors">
+      <span className="text-sm text-text-secondary truncate w-full text-center group-hover:text-foreground transition-colors">
         {story.userName.split(" ")[0]}
       </span>
     </button>

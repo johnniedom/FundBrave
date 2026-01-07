@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import gsap from "gsap";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
+import { EASE, DURATION } from "@/lib/constants/animation";
 import { useTheme } from "@/app/components/theme/theme-provider";
 import { Button } from "@/app/components/ui/button";
 import { Avatar } from "@/app/components/ui/Avatar";
@@ -51,12 +53,15 @@ export default function Navbar({ className }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const pathname = usePathname();
   const { theme } = useTheme();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navContainerRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLDivElement>(null);
   const linkRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Theme-aware logo: light logo for dark mode, dark logo for light mode
   const logoSrc =
@@ -131,10 +136,39 @@ export default function Navbar({ className }: NavbarProps) {
     setUserDropdownOpen(!userDropdownOpen);
   };
 
+  // Expand search bar
+  const expandSearch = useCallback(() => {
+    setIsSearchExpanded(true);
+    // Focus after animation starts
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  }, []);
+
+  // Collapse search bar
+  const collapseSearch = useCallback(() => {
+    setIsSearchExpanded(false);
+    setSearchQuery("");
+  }, []);
+
+  // Handle search input blur
+  const handleSearchBlur = useCallback(() => {
+    // Only collapse if search is empty
+    if (!searchQuery) {
+      collapseSearch();
+    }
+  }, [searchQuery, collapseSearch]);
+
+  // Handle escape key to close search
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      collapseSearch();
+      searchInputRef.current?.blur();
+    }
+  }, [collapseSearch]);
+
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 bg-[#09011a] w-full border-b border-[rgba(232,232,232,0.1)]",
+        "fixed top-0 left-0 right-0 z-50 bg-background w-full border-b border-border-default",
         className
       )}
     >
@@ -154,25 +188,71 @@ export default function Navbar({ className }: NavbarProps) {
             </div>
           </Link>
 
-          {/* Search Bar - reduced width, 48px height, #221a31 background */}
-          <div className="bg-[#221a31] flex items-center gap-2 h-12 px-4 rounded-2xl shrink-0 w-[220px]">
-            <Search size={20} className="text-white/60 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-white placeholder:text-white/60 text-sm tracking-wide font-normal w-full"
-              style={{ fontFamily: "Poppins, sans-serif" }}
-            />
-          </div>
+          {/* Search Bar - Icon that expands to search bar */}
+          <motion.div
+            ref={searchContainerRef}
+            onClick={() => !isSearchExpanded && expandSearch()}
+            animate={{
+              width: isSearchExpanded ? 220 : 44,
+              borderRadius: isSearchExpanded ? 16 : 22,
+            }}
+            transition={{
+              duration: DURATION.fast,
+              ease: EASE.snappy,
+            }}
+            className={cn(
+              "bg-surface-sunken flex items-center h-11 shrink-0 overflow-hidden",
+              !isSearchExpanded && "cursor-pointer hover:bg-surface-elevated justify-center",
+              isSearchExpanded && "px-3 gap-2"
+            )}
+          >
+            <Search size={20} className="text-text-secondary shrink-0" />
+            <AnimatePresence>
+              {isSearchExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: "auto" }}
+                  exit={{ opacity: 0, width: 0 }}
+                  transition={{ duration: DURATION.fast, ease: EASE.snappy }}
+                  className="flex items-center flex-1 min-w-0"
+                >
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={handleSearchBlur}
+                    onKeyDown={handleSearchKeyDown}
+                    className="bg-transparent border-none outline-none text-foreground placeholder:text-text-secondary text-sm tracking-wide font-normal w-full"
+                    style={{ fontFamily: "Poppins, sans-serif" }}
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      className="shrink-0 ml-1"
+                    >
+                      <X size={16} className="text-text-tertiary hover:text-text-secondary transition-colors" />
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
 
-          {/* Navigation Links */}
-          <div ref={navContainerRef} className="relative flex gap-6 items-center justify-center">
+          {/* Navigation Links - Always visible, no animation */}
+          <div
+            ref={navContainerRef}
+            className="relative flex gap-6 items-center justify-center"
+          >
             {/* Animated indicator - slides between links */}
             <div
               ref={indicatorRef}
-              className="absolute left-0 bottom-0 h-[2px] bg-white rounded-full"
+              className="absolute left-0 bottom-0 h-[2px] bg-foreground rounded-full"
               style={{ width: 0, opacity: 0 }}
             />
 
@@ -192,8 +272,8 @@ export default function Navbar({ className }: NavbarProps) {
                     className={cn(
                       "text-sm tracking-wide transition-colors duration-200",
                       isActive
-                        ? "text-white font-bold"
-                        : "text-white/60 font-medium hover:text-white/80"
+                        ? "text-foreground font-bold"
+                        : "text-text-secondary font-medium hover:text-foreground/80"
                     )}
                   >
                     {link.label}
@@ -224,27 +304,27 @@ export default function Navbar({ className }: NavbarProps) {
             <div className="flex gap-1.5 items-center">
               {/* Settings Icon Button - 36px */}
               <button
-                className="size-9 rounded-full bg-[#221a31] flex items-center justify-center hover:bg-white/10 transition-colors"
+                className="size-9 rounded-full bg-surface-sunken flex items-center justify-center hover:bg-surface-overlay transition-colors"
                 aria-label="Settings"
               >
-                <Settings size={18} className="text-white/80" />
+                <Settings size={18} className="text-foreground/80" />
               </button>
 
               {/* Messages Icon Button - 36px */}
               <Link
                 href="/messenger"
-                className="size-9 rounded-full bg-[#221a31] flex items-center justify-center hover:bg-white/10 transition-colors"
+                className="size-9 rounded-full bg-surface-sunken flex items-center justify-center hover:bg-surface-overlay transition-colors"
                 aria-label="Messages"
               >
-                <MessageCircle size={18} className="text-white/80" />
+                <MessageCircle size={18} className="text-foreground/80" />
               </Link>
 
               {/* Notifications Icon Button - 36px */}
               <button
-                className="size-9 rounded-full bg-[#221a31] flex items-center justify-center hover:bg-white/10 transition-colors relative"
+                className="size-9 rounded-full bg-surface-sunken flex items-center justify-center hover:bg-surface-overlay transition-colors relative"
                 aria-label="Notifications"
               >
-                <Bell size={18} className="text-white/80" />
+                <Bell size={18} className="text-foreground/80" />
               </button>
 
               {/* User Avatar with Dropdown */}
@@ -267,13 +347,13 @@ export default function Navbar({ className }: NavbarProps) {
                   {/* User Info */}
                   <div className="flex flex-col items-start">
                     <div className="flex gap-1 items-center">
-                      <span className="text-white text-xs font-medium">
+                      <span className="text-foreground text-xs font-medium">
                         Anna Doe
                       </span>
                       <ChevronDown
                         size={14}
                         className={cn(
-                          "text-white/60 transition-transform duration-200",
+                          "text-text-secondary transition-transform duration-200",
                           userDropdownOpen && "rotate-180"
                         )}
                       />
@@ -294,32 +374,32 @@ export default function Navbar({ className }: NavbarProps) {
 
                 {/* Dropdown Menu */}
                 {userDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1025] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-surface-elevated border border-border-default rounded-xl shadow-xl overflow-hidden z-50">
                     <div className="py-2">
                       <Link
                         href="/profile"
-                        className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 active:bg-white/10 hover:text-white transition-colors"
+                        className="block px-4 py-2 text-sm text-foreground/80 hover:bg-surface-overlay active:bg-surface-overlay hover:text-foreground transition-colors"
                         onClick={() => setUserDropdownOpen(false)}
                       >
                         View Profile
                       </Link>
                       <Link
                         href="/dashboard"
-                        className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 active:bg-white/10 hover:text-white transition-colors"
+                        className="block px-4 py-2 text-sm text-foreground/80 hover:bg-surface-overlay active:bg-surface-overlay hover:text-foreground transition-colors"
                         onClick={() => setUserDropdownOpen(false)}
                       >
                         Dashboard
                       </Link>
                       <Link
                         href="/settings"
-                        className="block px-4 py-2 text-sm text-white/80 hover:bg-white/5 active:bg-white/10 hover:text-white transition-colors"
+                        className="block px-4 py-2 text-sm text-foreground/80 hover:bg-surface-overlay active:bg-surface-overlay hover:text-foreground transition-colors"
                         onClick={() => setUserDropdownOpen(false)}
                       >
                         Settings
                       </Link>
-                      <hr className="border-white/10 my-1" />
+                      <hr className="border-border-default my-1" />
                       <button
-                        className="w-full text-left px-4 py-2 text-sm text-white/80 hover:bg-white/5 active:bg-white/10 hover:text-white transition-colors"
+                        className="w-full text-left px-4 py-2 text-sm text-foreground/80 hover:bg-surface-overlay active:bg-surface-overlay hover:text-foreground transition-colors"
                         onClick={() => {
                           // Handle wallet connection
                           setUserDropdownOpen(false);
@@ -327,9 +407,9 @@ export default function Navbar({ className }: NavbarProps) {
                       >
                         Connect Wallet
                       </button>
-                      <hr className="border-white/10 my-1" />
+                      <hr className="border-border-default my-1" />
                       <button
-                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 active:bg-white/10 hover:text-red-300 transition-colors"
+                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-surface-overlay active:bg-surface-overlay hover:text-red-300 transition-colors"
                         onClick={() => {
                           // Handle logout
                           setUserDropdownOpen(false);
@@ -364,18 +444,18 @@ export default function Navbar({ className }: NavbarProps) {
           <div className="flex items-center gap-3">
             {/* Search Button (Mobile) */}
             <button
-              className="size-11 rounded-full bg-[#221a31] flex items-center justify-center active:bg-white/10"
+              className="size-11 rounded-full bg-surface-sunken flex items-center justify-center active:bg-surface-overlay"
               aria-label="Search"
             >
-              <Search size={20} className="text-white/60" />
+              <Search size={20} className="text-text-secondary" />
             </button>
 
             {/* Notifications Button (Mobile) */}
             <button
-              className="size-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center active:bg-white/10"
+              className="size-11 rounded-full bg-surface-overlay border border-border-default flex items-center justify-center active:bg-surface-overlay"
               aria-label="Notifications"
             >
-              <Bell size={20} className="text-white/80" />
+              <Bell size={20} className="text-foreground/80" />
             </button>
 
             {/* User Avatar (Mobile) */}
@@ -390,14 +470,14 @@ export default function Navbar({ className }: NavbarProps) {
             {/* Hamburger Menu Button */}
             <button
               onClick={toggleMobileMenu}
-              className="size-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center active:bg-white/10"
+              className="size-11 rounded-full bg-surface-overlay border border-border-default flex items-center justify-center active:bg-surface-overlay"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <X size={20} className="text-white" />
+                <X size={20} className="text-foreground" />
               ) : (
-                <Menu size={20} className="text-white" />
+                <Menu size={20} className="text-foreground" />
               )}
             </button>
           </div>
@@ -414,17 +494,17 @@ export default function Navbar({ className }: NavbarProps) {
           />
 
           {/* Mobile Menu Panel */}
-          <div className="fixed top-16 left-0 right-0 bg-[#09011a] border-t border-white/10 z-[60] lg:hidden max-h-[calc(100vh-64px)] overflow-y-auto">
+          <div className="fixed top-16 left-0 right-0 bg-background border-t border-border-default z-[60] lg:hidden max-h-[calc(100vh-64px)] overflow-y-auto">
             {/* Mobile Search */}
-            <div className="p-4 border-b border-white/10">
-              <div className="bg-[#221a31] flex items-center gap-2 h-12 px-4 rounded-xl">
-                <Search size={20} className="text-white/60 shrink-0" />
+            <div className="p-4 border-b border-border-default">
+              <div className="bg-surface-sunken flex items-center gap-2 h-12 px-4 rounded-xl">
+                <Search size={20} className="text-text-secondary shrink-0" />
                 <input
                   type="text"
                   placeholder="Type to Search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent border-none outline-none text-white placeholder:text-white/60 text-sm w-full"
+                  className="bg-transparent border-none outline-none text-foreground placeholder:text-text-secondary text-sm w-full"
                 />
               </div>
             </div>
@@ -441,13 +521,13 @@ export default function Navbar({ className }: NavbarProps) {
                     className={cn(
                       "flex items-center gap-3 px-6 py-4 text-base transition-colors",
                       isActive
-                        ? "text-white bg-white/5 border-l-2 border-primary-500"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
+                        ? "text-foreground bg-surface-overlay border-l-2 border-primary-500"
+                        : "text-text-secondary hover:text-foreground hover:bg-surface-overlay"
                     )}
                   >
                     {/* Active indicator dot for mobile */}
                     {isActive && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-foreground" />
                     )}
                     <span className={isActive ? "font-bold" : "font-semibold"}>
                       {link.label}
@@ -458,7 +538,7 @@ export default function Navbar({ className }: NavbarProps) {
             </div>
 
             {/* Mobile Add Campaign Button */}
-            <div className="p-4 border-t border-white/10">
+            <div className="p-4 border-t border-border-default">
               <Link href="/campaigns/create" onClick={() => setMobileMenuOpen(false)}>
                 <Button
                   variant="primary"
@@ -480,23 +560,23 @@ export default function Navbar({ className }: NavbarProps) {
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-overlay border border-border-default hover:bg-surface-elevated transition-colors"
               >
-                <Settings size={24} className="text-white/80" />
-                <span className="text-xs text-white/60">Settings</span>
+                <Settings size={24} className="text-foreground/80" />
+                <span className="text-xs text-text-secondary">Settings</span>
               </Link>
               <Link
                 href="/messages"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-overlay border border-border-default hover:bg-surface-elevated transition-colors"
               >
-                <MessageCircle size={24} className="text-white/80" />
-                <span className="text-xs text-white/60">Messages</span>
+                <MessageCircle size={24} className="text-foreground/80" />
+                <span className="text-xs text-text-secondary">Messages</span>
               </Link>
               <Link
                 href="/profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-overlay border border-border-default hover:bg-surface-elevated transition-colors"
               >
                 <Avatar
                   src="/image.png"
@@ -505,7 +585,7 @@ export default function Navbar({ className }: NavbarProps) {
                   size="sm"
                   className="size-6"
                 />
-                <span className="text-xs text-white/60">Profile</span>
+                <span className="text-xs text-text-secondary">Profile</span>
               </Link>
             </div>
 
