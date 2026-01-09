@@ -15,9 +15,9 @@ export const OnboardingAside = () => {
 
   return (
     <aside
-      className="hidden md:flex w-full md:w-1/3 bg-slate-900/50 p-6 md:p-12 flex-col justify-between relative md:rounded-l-2xl isolate"
+      className="hidden md:flex w-full md:w-1/3 bg-neutral-dark-500/50 p-6 md:p-12 flex-col justify-between relative md:rounded-l-2xl isolate"
       style={{
-        background: "linear-gradient(to bottom, #450CF0 0%, #09011A 50%)",
+        background: "linear-gradient(to bottom, var(--primary-500) 0%, var(--neutral-dark-500) 50%)",
         transformOrigin: "top",
       }}
     >
@@ -64,7 +64,7 @@ export const OnboardingAside = () => {
       </div>
 
       {/* Footer link */}
-      <div className="text-gray-400 text-sm">
+      <div className="text-muted-foreground text-sm">
         <a
           href="/"
           className="hover:text-white transition-colors inline-flex items-center gap-2"

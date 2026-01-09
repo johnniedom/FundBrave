@@ -1,26 +1,21 @@
 'use client';
 import React from 'react';
 import { motion } from "motion/react";
+import { Spinner } from "@/app/components/ui/Spinner";
+
 interface SocialLoginButtonsProps {
   onGoogleLogin: () => void;
   onXLogin: () => void;
   delay?: number;
   isGoogleLoading?: boolean;
   isXLoading?: boolean;
+  className?: string;
 }
 
 const buttonVariants = {
   hover: { scale: 1.02, transition: { duration: 0.2 } },
   tap: { scale: 0.98 },
 };
-
-const LoadingSpinner = () => (
-  <motion.div
-    className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-    animate={{ rotate: 360 }}
-    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-  />
-);
 
 export default function SocialLoginButtons({
   onGoogleLogin,
@@ -39,13 +34,13 @@ export default function SocialLoginButtons({
       <motion.button
         onClick={onGoogleLogin}
         disabled={isGoogleLoading || isXLoading}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-transparent py-3 text-white transition-colors hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-transparent py-3 text-white transition-colors hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         variants={buttonVariants}
         whileHover={!isGoogleLoading && !isXLoading ? "hover" : undefined}
         whileTap={!isGoogleLoading && !isXLoading ? "tap" : undefined}
       >
         {isGoogleLoading ? (
-          <LoadingSpinner />
+          <Spinner size="md" color="white" />
         ) : (
           <motion.svg
             width="24"
@@ -80,13 +75,13 @@ export default function SocialLoginButtons({
       <motion.button
         onClick={onXLogin}
         disabled={isGoogleLoading || isXLoading}
-        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-600 bg-transparent py-3 text-white transition-colors hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-transparent py-3 text-white transition-colors hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
         variants={buttonVariants}
         whileHover={!isGoogleLoading && !isXLoading ? "hover" : undefined}
         whileTap={!isGoogleLoading && !isXLoading ? "tap" : undefined}
       >
         {isXLoading ? (
-          <LoadingSpinner />
+          <Spinner size="md" color="white" />
         ) : (
           <motion.svg
             className="h-5 w-5"

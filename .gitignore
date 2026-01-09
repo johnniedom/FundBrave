@@ -13,6 +13,7 @@ Thumbs.db
 *.swp
 *.swo
 *~
+.claude/
 
 # Logs
 *.log
@@ -38,7 +39,7 @@ TESTING_QUICKSTART.md
 .cache/
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*

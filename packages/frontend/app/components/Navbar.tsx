@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/app/components/ui/icons";
 import { ThemeToggle } from "./theme";
 import { useTheme } from "./theme/theme-provider";
+import { Button } from "./ui/button";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,9 +56,9 @@ export default function Navbar() {
             </Link>
           </div>
           <ThemeToggle />
-          <button className="bg-primary hover:bg-primary-600 text-white px-4 py-2 rounded-md transition-colors font-medium">
+          <Button variant="primary" size="sm">
             Connect Wallet
-          </button>
+          </Button>
         </div>
 
         {/* Mobile Menu Button */}
@@ -103,9 +104,9 @@ export default function Navbar() {
               About
             </Link>
             <div className="pt-2">
-              <button className="w-full bg-primary hover:bg-primary-600 text-white px-4 py-2 rounded-md transition-colors font-medium">
+              <Button variant="primary" size="md" fullWidth>
                 Connect Wallet
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@
 
 import React, { useMemo, useState } from "react";
 import CreatePost from "./CreatePost";
-import type { PublishData, UserProfile } from "../types/CreatePost.types";
+import type { PublishData, UserProfile, CampaignOption } from "../types/CreatePost.types";
 import ShareCampaignModal from "../ShareCampaignModal";
 
 const ExampleUsage: React.FC = () => {
@@ -17,7 +17,7 @@ const ExampleUsage: React.FC = () => {
   const currentUser: UserProfile = {
     name: "John Smith",
     avatar: "/api/placeholder/42/42",
-    audience: "Public",
+    audience: "public",
   };
 
   // Example campaign data
@@ -32,11 +32,11 @@ const ExampleUsage: React.FC = () => {
     "Arts and Culture",
   ];
 
-  const userCampaigns = [
-    "Help Build New School Library",
-    "Support Local Animal Shelter",
-    "Community Garden Initiative",
-    "Emergency Relief Fund",
+  const userCampaigns: CampaignOption[] = [
+    { id: "1", name: "Help Build New School Library", category: "Education" },
+    { id: "2", name: "Support Local Animal Shelter", category: "Animals" },
+    { id: "3", name: "Community Garden Initiative", category: "Community" },
+    { id: "4", name: "Emergency Relief Fund", category: "Emergency" },
   ];
 
   const handlePublish = async (data: PublishData) => {
